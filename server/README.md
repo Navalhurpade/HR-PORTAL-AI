@@ -9,9 +9,10 @@ Fastify + TypeScript backend with PostgreSQL, bearer-token authentication, role-
 3. Run `npm install`.
 4. Run `npm run db:migrate` to create the schema.
 5. Set `JWT_SECRET` to a random secret of at least 32 characters for stable tokens (required in production). Without it, local development generates an ephemeral secret on startup.
-6. Provision the initial administrator out-of-band with the secure user creation command below.
-7. Run `npm run dev`; the API listens on `http://127.0.0.1:3001` by default.
-8. The API checks PostgreSQL before listening and logs a successful connection. `GET /health` checks database availability.
+6. Set `NVIDIA_API_KEY` in `.env` to enable Nori. The key is used only by the server; never add it to the client or commit it. Optionally set `NVIDIA_MODEL` to override the default.
+7. Provision the initial administrator out-of-band with the secure user creation command below.
+8. Run `npm run dev`; the API listens on `http://127.0.0.1:3001` by default.
+9. The API checks PostgreSQL before listening and logs a successful connection. `GET /health` checks database availability.
 
 `npm run build` type-checks and emits the production server to `dist/`; `npm start` runs that build.
 
@@ -38,6 +39,14 @@ The command requires a password of at least 12 characters and stores only a bcry
 - `GET /leaves/:leaveRequestId` — employees can read only their own requests; HR/super admins can read any request.
 - `POST /leaves` — creates a pending request for the authenticated user; validates dates and active policy, checks max consecutive days and overlapping pending/approved requests.
 - `POST /leaves/:leaveRequestId/approve` and `/reject` — HR and super admins only; only pending requests can be decided; self-approval is prohibited. `decisionNote` is optional.
+
+## Nori chat API
+
+- `POST /chat` — requires a bearer token and is limited to 20 requests per minute.
+- Request JSON: `{ "message": "...", "conversationId": "optional-uuid", "history": [{ "role": "user|assistant", "content": "..." }] }`. Messages are non-blank and at most 4,000 characters; history is limited to 12 turns/12,000 aggregate characters. Unknown fields (including client-supplied user IDs or roles) are rejected.
+- Calls NVIDIA's OpenAI-compatible chat completions endpoint with `NVIDIA_MODEL` (defaults to `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning`) using native Node `fetch`, a 30-second timeout, non-streaming responses, and 2,048 output tokens.
+- The server sends the signed-in user's verified role, but not their name, email, department, leave records, or other employee data. Conversation history is currently held in the browser and sent with each message; it is not persisted in PostgreSQL. Do not treat the model as an approval/decision system or send sensitive HR/medical details in chat until provider data handling and retention are reviewed.
+- Missing `NVIDIA_API_KEY` returns `503 AI_NOT_CONFIGURED`; provider/network failures return sanitized error codes and do not expose upstream response bodies or credentials.
 
 The API deliberately does not yet calculate business-day balances (weekends/holidays), enforce annual allowance, or support manager approval chains because those rules depend on company policy and location. The `requestedDays` value currently counts calendar days and should be revised once the policy is decided.
 

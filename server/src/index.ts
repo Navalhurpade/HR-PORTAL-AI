@@ -6,6 +6,7 @@ import Fastify from 'fastify';
 import { randomBytes } from 'node:crypto';
 import { pool } from './db/pool.js';
 import { registerAuthRoutes } from './routes/auth.js';
+import { registerChatRoute } from './routes/chat.js';
 import { registerLeaveRoutes } from './routes/leaves.js';
 import { registerUserRoutes } from './routes/users.js';
 
@@ -35,6 +36,7 @@ await app.register(rateLimit, { global: false });
 await app.register(jwt, { secret: jwtSecret });
 
 await app.register(registerAuthRoutes);
+await app.register(registerChatRoute);
 await app.register(registerLeaveRoutes);
 await app.register(registerUserRoutes);
 

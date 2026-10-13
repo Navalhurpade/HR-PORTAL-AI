@@ -12,17 +12,11 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import type { ApiPolicy, ApiUser } from './api';
-import type { ChatLeaveContext } from './chatTypes';
+import { api, type ApiUser, type ChatTurn } from './api';
 import './ChatAssistant.css';
 
 type ChatMessage = { id: number; role: 'assistant' | 'user'; text: string; time: string };
-
-type ChatAssistantProps = {
-  user: ApiUser;
-  policies: ApiPolicy[];
-  leaveContext: ChatLeaveContext;
-};
+type ChatAssistantProps = { user: ApiUser };
 
 const initialMessage: ChatMessage = {
   id: 1,
@@ -31,75 +25,20 @@ const initialMessage: ChatMessage = {
   time: 'Just now',
 };
 
-function responseFor(text: string, user: ApiUser, policies: ApiPolicy[], leaveContext: ChatLeaveContext) {
-  const query = text.toLowerCase();
-  const mine = leaveContext.requests.filter((request) => request.userId === user.userId);
-  const currentYear = new Date().getFullYear().toString();
-  const today = new Date().toISOString().slice(0, 10);
-
-  if (query.includes('balance') || query.includes('remaining') || query.includes('left')) {
-    if (user.role !== 'employee') {
-      return `I can help with employee-specific leave questions, but I don’t have an organization-wide balance report in this preview. There are ${leaveContext.pendingCount} requests waiting for review.`;
-    }
-    if (!policies.length)
-      return 'Your HR team has not added active leave policies yet, so I can’t calculate a balance just yet.';
-    const summary = policies.map((policy) => {
-      const used = mine
-        .filter(
-          (request) =>
-            request.policyId === policy.policyId &&
-            request.status === 'approved' &&
-            request.startDate.startsWith(currentYear),
-        )
-        .reduce((total, request) => total + request.requestedDays, 0);
-      const left = policy.annualAllowanceDays === null ? null : Math.max(0, policy.annualAllowanceDays - used);
-      return `${policy.name}: ${left === null ? 'no fixed annual allowance' : `${left} days remaining (${used} approved)`}`;
-    });
-    return `Here’s what I can see from your current policies:\n${summary.map((item) => `• ${item}`).join('\n')}\n\nThis preview totals approved calendar days; your HR team can confirm local workday and holiday rules.`;
-  }
-
-  if (query.includes('policy')) {
-    if (!policies.length)
-      return 'There are no active leave policies configured yet. Your HR team can add them when the policy setup is ready.';
-    return `Your active leave options are:\n${policies.map((policy) => `• ${policy.name}${policy.annualAllowanceDays === null ? '' : ` — ${policy.annualAllowanceDays} days per year`}${policy.requiresDocumentation ? ' · documentation may be required' : ''}`).join('\n')}\n\nFor eligibility or local rules, check with your HR team.`;
-  }
-
-  if (query.includes('upcoming') || query.includes('next leave') || query.includes('when am i off')) {
-    const upcoming = mine
-      .filter(
-        (request) => request.startDate >= today && request.status !== 'rejected' && request.status !== 'cancelled',
-      )
-      .sort((left, right) => left.startDate.localeCompare(right.startDate))[0];
-    if (!upcoming)
-      return 'I don’t see any upcoming leave requests for you. When you’re ready, open My leave and choose “Request time off.”';
-    return `Your next ${upcoming.status} request is ${upcoming.leaveName}, ${upcoming.startDate} to ${upcoming.endDate} (${upcoming.requestedDays} ${upcoming.requestedDays === 1 ? 'day' : 'days'}).`;
-  }
-
-  if (query.includes('request') || query.includes('apply') || query.includes('time off') || query.includes('leave')) {
-    if (user.role !== 'employee') {
-      return `You have ${leaveContext.pendingCount} leave request${leaveContext.pendingCount === 1 ? '' : 's'} waiting for review. Open Requests to see the queue. HR and Super Admin can approve or reject pending requests; employees cannot review their own requests.`;
-    }
-    return 'To request time off, open My leave or choose “Request time off” from your dashboard. Select an active policy and dates, add an optional note, then send it. It will appear as Pending while it awaits review.';
-  }
-
-  if (query.includes('hello') || query.includes('hi ') || query === 'hi' || query.includes('hey')) {
-    return `Hey ${user.name.split(' ')[0]}! What can I help you find today? You can ask about leave balances, policies, or your next time off.`;
-  }
-
-  return 'I’m Nori’s interface preview—my chat service is not connected yet. Try one of the suggestions below, or ask about leave, balances, upcoming time off, or policies.';
-}
-
 function currentTime() {
   return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date());
 }
 
-export function ChatAssistant({ user, policies, leaveContext }: ChatAssistantProps) {
+export function ChatAssistant({ user }: ChatAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
+  const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const [isThinking, setIsThinking] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const conversationIdRef = useRef<string>(conversationId);
+  const messageSequence = useRef(1);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestions =
@@ -114,29 +53,51 @@ export function ChatAssistant({ user, policies, leaveContext }: ChatAssistantPro
     }
   }, [isOpen, messages, isThinking]);
 
-  function sendMessage(value: string) {
+  async function sendMessage(value: string) {
     const text = value.trim();
     if (!text || isThinking) return;
+
     setShowWelcome(false);
-    setMessages((current) => [...current, { id: Date.now(), role: 'user', text, time: currentTime() }]);
+    const requestConversationId = conversationIdRef.current;
+    const history: ChatTurn[] = messages.slice(-12).map((message) => ({
+      role: message.role,
+      content: message.text,
+    }));
+    const userMessage: ChatMessage = { id: ++messageSequence.current, role: 'user', text, time: currentTime() };
+    setMessages((current) => [...current, userMessage]);
     setInput('');
     setIsThinking(true);
-    window.setTimeout(() => {
+
+    try {
+      const result = await api.chat({ message: text, conversationId: requestConversationId, history });
+      if (conversationIdRef.current !== requestConversationId) return;
+      conversationIdRef.current = result.conversationId;
+      setConversationId(result.conversationId);
+      setMessages((current) => [
+        ...current,
+        { id: ++messageSequence.current, role: 'assistant', text: result.message.content, time: currentTime() },
+      ]);
+    } catch (error) {
+      if (conversationIdRef.current !== requestConversationId) return;
       setMessages((current) => [
         ...current,
         {
-          id: Date.now() + 1,
+          id: ++messageSequence.current,
           role: 'assistant',
-          text: responseFor(text, user, policies, leaveContext),
+          text: error instanceof Error ? error.message : 'Nori is temporarily unavailable. Please try again.',
           time: currentTime(),
         },
       ]);
-      setIsThinking(false);
-    }, 800);
+    } finally {
+      if (conversationIdRef.current === requestConversationId) setIsThinking(false);
+    }
   }
 
   function resetConversation() {
-    setMessages([{ ...initialMessage, id: Date.now() }]);
+    const nextConversationId = crypto.randomUUID();
+    conversationIdRef.current = nextConversationId;
+    setConversationId(nextConversationId);
+    setMessages([{ ...initialMessage, id: ++messageSequence.current }]);
     setShowWelcome(true);
     setInput('');
     setIsThinking(false);
@@ -212,10 +173,10 @@ export function ChatAssistant({ user, policies, leaveContext }: ChatAssistantPro
                 )}
                 <div className="nori-message-content">
                   <div className="nori-bubble">
-                    {message.text.split('\n').map((line, index) => (
+                    {message.text.split('\n').map((line, index, lines) => (
                       <span key={`${message.id}-${index}`}>
                         {line}
-                        {index < message.text.split('\n').length - 1 && <br />}
+                        {index < lines.length - 1 && <br />}
                       </span>
                     ))}
                   </div>
@@ -248,7 +209,7 @@ export function ChatAssistant({ user, policies, leaveContext }: ChatAssistantPro
                 <Sparkles size={13} /> A GOOD PLACE TO START
               </div>
               {suggestions.map((suggestion) => (
-                <button type="button" key={suggestion} onClick={() => sendMessage(suggestion)}>
+                <button type="button" key={suggestion} onClick={() => void sendMessage(suggestion)}>
                   {suggestion}
                   <ArrowUpRight size={13} />
                 </button>
@@ -261,7 +222,7 @@ export function ChatAssistant({ user, policies, leaveContext }: ChatAssistantPro
               className="nori-composer"
               onSubmit={(event) => {
                 event.preventDefault();
-                sendMessage(input);
+                void sendMessage(input);
               }}
             >
               <input
@@ -287,7 +248,7 @@ export function ChatAssistant({ user, policies, leaveContext }: ChatAssistantPro
             <span>
               <Bot size={13} /> Nori can make mistakes. Check important details with HR.
             </span>
-            <span>PREVIEW</span>
+            <span>AI BETA</span>
           </footer>
         </section>
       )}

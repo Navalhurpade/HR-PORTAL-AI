@@ -45,6 +45,11 @@ export interface ApiPolicy {
   effectiveTo: string | null;
 }
 
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -107,5 +112,10 @@ export const api = {
     request<{ item: ApiLeave }>(`/leaves/${encodeURIComponent(id)}/${decision}`, {
       method: 'POST',
       body: JSON.stringify({}),
+    }),
+  chat: (input: { message: string; conversationId: string; history: ChatTurn[] }) =>
+    request<{ conversationId: string; message: { role: 'assistant'; content: string; createdAt: string } }>('/chat', {
+      method: 'POST',
+      body: JSON.stringify(input),
     }),
 };

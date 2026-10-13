@@ -459,22 +459,7 @@ function App() {
           {toast}
         </div>
       )}
-      <ChatAssistant
-        user={user}
-        policies={policies}
-        leaveContext={{
-          requests: requests.map((request) => ({
-            userId: request.userId,
-            policyId: request.policyId,
-            leaveName: request.type,
-            startDate: request.startDate,
-            endDate: request.endDate,
-            requestedDays: request.days,
-            status: request.status.toLowerCase() as 'pending' | 'approved' | 'rejected' | 'cancelled',
-          })),
-          pendingCount,
-        }}
-      />
+      <ChatAssistant user={user} />
     </div>
   );
 }
