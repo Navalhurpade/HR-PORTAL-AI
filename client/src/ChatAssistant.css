@@ -1,0 +1,753 @@
+.nori-root {
+  --nori-ink: #282438;
+  --nori-muted: #8f899e;
+  --nori-purple: #66547f;
+  --nori-line: #ece9f0;
+  position: fixed;
+  right: 28px;
+  bottom: 25px;
+  z-index: 60;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  color: var(--nori-ink);
+}
+.nori-launcher {
+  isolation: isolate;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 194px;
+  height: 62px;
+  padding: 7px 17px 7px 8px;
+  border: 1px solid #ffffff40;
+  border-radius: 40px;
+  background: linear-gradient(112deg, #342d4d 0%, #564773 58%, #765d8c 100%);
+  color: #fff;
+  box-shadow:
+    0 10px 34px #332a4854,
+    0 3px 8px #291f3730;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+  animation: nori-float 4.4s ease-in-out infinite;
+}
+.nori-launcher:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 15px 38px #332a4866,
+    0 4px 10px #291f3738;
+}
+.nori-launcher:active {
+  transform: translateY(0) scale(0.98);
+}
+.nori-launcher-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f5d4a8, #e4a77d 55%, #bd86a2);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 4px #ffffffa1,
+    0 3px 10px #1913263d;
+  flex: none;
+}
+.nori-launcher-icon svg {
+  filter: drop-shadow(0 1px 2px #54406766);
+}
+.nori-launcher-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+.nori-launcher-copy b {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+.nori-launcher-copy small {
+  color: #e0dbe9;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.nori-launcher-aura {
+  position: absolute;
+  z-index: -1;
+  inset: -5px;
+  border-radius: 45px;
+  background: linear-gradient(120deg, #d5a98e, #b69ac8, #8799b9, #d5a98e);
+  background-size: 240% 100%;
+  opacity: 0.42;
+  filter: blur(8px);
+  animation: nori-aura 7s linear infinite;
+}
+.nori-launcher-ping {
+  position: absolute;
+  right: 9px;
+  top: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid #564773;
+  background: #a5d6b8;
+}
+.nori-launcher-open {
+  animation: none;
+  background: #423953;
+  min-width: 149px;
+  height: 53px;
+  padding: 5px 14px 5px 6px;
+}
+.nori-launcher-open .nori-launcher-icon {
+  width: 39px;
+  height: 39px;
+  background: #ffffff18;
+  box-shadow: none;
+}
+.nori-launcher-open .nori-launcher-icon svg {
+  transform: rotate(0);
+}
+.nori-launcher-open .nori-launcher-copy small {
+  display: none;
+}
+.nori-launcher-open .nori-launcher-copy b {
+  font-size: 12px;
+}
+.nori-launcher-open .nori-launcher-ping {
+  display: none;
+}
+.nori-panel {
+  position: fixed;
+  right: 28px;
+  bottom: 101px;
+  width: 408px;
+  height: min(680px, calc(100dvh - 132px));
+  min-height: 490px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eeebf1;
+  border-radius: 21px;
+  box-shadow:
+    0 24px 80px #2d233f2b,
+    0 4px 16px #30263e12;
+  transform-origin: bottom right;
+  animation: nori-panel-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.nori-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 17px 15px;
+  background:
+    radial-gradient(ellipse at 82% 0%, #75608e 0%, transparent 48%),
+    linear-gradient(118deg, #342e4a 0%, #514467 61%, #665477 100%);
+  color: #fff;
+  flex: none;
+}
+.nori-header-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 43px;
+  height: 43px;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #f4d4aa, #dfaa90 55%, #b58db7);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 4px #ffffff8c,
+    0 4px 12px #211b3280;
+}
+.nori-header-orb svg {
+  filter: drop-shadow(0 1px 2px #54406766);
+}
+.nori-header-orb span {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  right: -1px;
+  bottom: 0;
+  border: 2px solid #594b6e;
+  border-radius: 50%;
+  background: #9bd1ab;
+}
+.nori-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+.nori-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nori-name-row h2 {
+  font:
+    500 21px Georgia,
+    'Times New Roman',
+    serif;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.25px;
+}
+.nori-ai-label {
+  padding: 3px 5px;
+  border: 1px solid #ffffff32;
+  border-radius: 4px;
+  background: #ffffff12;
+  color: #e6dff0;
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: 0.9px;
+}
+.nori-online {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e1dce9;
+  font-size: 9px;
+}
+.nori-online i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9bd1ab;
+  box-shadow: 0 0 0 3px #9bd1ab20;
+}
+.nori-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nori-header-actions button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff0d;
+  color: #e7e1ed;
+  cursor: pointer;
+  transition:
+    background 0.16s,
+    color 0.16s;
+}
+.nori-header-actions button:hover {
+  background: #ffffff20;
+  color: #fff;
+}
+.nori-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  border-bottom: 1px solid #f1eff3;
+  background: #fbf9fc;
+  color: #786c88;
+  font-size: 9px;
+  flex: none;
+}
+.nori-context > svg {
+  color: #a487b2;
+  flex: none;
+}
+.nori-context > span {
+  flex: 1;
+}
+.nori-context button {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: #aaa4b1;
+  cursor: pointer;
+}
+.nori-conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 15px 16px;
+  background: linear-gradient(180deg, #fff 0%, #fdfcfe 100%);
+  scrollbar-width: thin;
+  scrollbar-color: #dfd9e5 transparent;
+}
+.nori-day-divider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #b2adba;
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: 1px;
+}
+.nori-day-divider:before,
+.nori-day-divider:after {
+  content: '';
+  height: 1px;
+  background: #f0edf2;
+  flex: 1;
+}
+.nori-message {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 91%;
+  animation: nori-message-in 0.22s ease both;
+}
+.nori-message-user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.nori-message-avatar {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #efe7f4, #e1d5e9);
+  color: #79648f;
+}
+.nori-message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+}
+.nori-bubble {
+  white-space: pre-wrap;
+  padding: 11px 12px;
+  border: 1px solid #ede9f0;
+  border-radius: 13px 13px 13px 4px;
+  background: #f7f5f8;
+  color: #504b5a;
+  font-size: 10px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.nori-message-user .nori-bubble {
+  border-color: #5b4b75;
+  border-radius: 13px 13px 4px 13px;
+  background: linear-gradient(135deg, #5b4b75, #726087);
+  color: #fff;
+}
+.nori-message-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 3px;
+  color: #aaa5b1;
+  font-size: 8px;
+}
+.nori-message-user .nori-message-time {
+  justify-content: flex-end;
+}
+.nori-message-user .nori-message-time svg {
+  color: #91ae9a;
+}
+.nori-thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nori-typing {
+  height: 31px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 11px;
+  border: 1px solid #ede9f0;
+  border-radius: 12px 12px 12px 4px;
+  background: #f7f5f8;
+}
+.nori-typing i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #9485a6;
+  animation: nori-typing 1s ease-in-out infinite;
+}
+.nori-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.nori-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.nori-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 15px 13px;
+  flex: none;
+}
+.nori-suggestions-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 1px;
+  color: #a39baa;
+  font-size: 7px;
+  letter-spacing: 0.9px;
+  font-weight: 750;
+}
+.nori-suggestions-label svg {
+  color: #9b82ae;
+}
+.nori-suggestions > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #ebe6f0;
+  border-radius: 9px;
+  background: #fff;
+  color: #625772;
+  font-size: 9px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.15s;
+}
+.nori-suggestions > button:hover {
+  border-color: #c9b9d2;
+  background: #fcf9fd;
+  transform: translateX(2px);
+}
+.nori-suggestions > button svg {
+  color: #a393b3;
+  flex: none;
+}
+.nori-composer-wrap {
+  padding: 12px 14px 8px;
+  border-top: 1px solid #efedf2;
+  background: #fff;
+  flex: none;
+}
+.nori-composer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 43px;
+  padding: 4px 5px 4px 12px;
+  border: 1px solid #e9e5ed;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 2px 7px #30233e08;
+  transition:
+    border-color 0.16s,
+    box-shadow 0.16s;
+}
+.nori-composer:focus-within {
+  border-color: #a692ba;
+  box-shadow: 0 0 0 3px #9c89ac1b;
+}
+.nori-composer input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #4d4857;
+  font: inherit;
+  font-size: 10px;
+}
+.nori-composer input::placeholder {
+  color: #aaa5b1;
+}
+.nori-composer > button {
+  width: 33px;
+  height: 33px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: #594a72;
+  color: #fff;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.nori-composer > button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #46395e;
+}
+.nori-composer > button:disabled {
+  background: #eeeaf1;
+  color: #b4aeb9;
+  cursor: not-allowed;
+}
+.nori-composer-foot {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 2px 0;
+  color: #aaa5b1;
+  font-size: 8px;
+}
+.nori-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  margin-right: 3px;
+  border: 1px solid #e7e3e9;
+  border-radius: 3px;
+  color: #8c8694;
+  font-size: 9px;
+}
+.nori-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid #f3f1f4;
+  background: #fcfbfd;
+  color: #aaa5b1;
+  font-size: 7px;
+  flex: none;
+}
+.nori-footer > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.nori-footer svg {
+  color: #8d7c9f;
+}
+.nori-footer > span:last-child {
+  color: #aaa1b4;
+  font-weight: 750;
+  letter-spacing: 0.8px;
+}
+.nori-expanded:before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #241d3185;
+  backdrop-filter: blur(3px);
+  animation: nori-backdrop-in 0.2s ease both;
+}
+.nori-panel-expanded {
+  position: fixed;
+  inset: 3.5vh 5vw;
+  width: 90vw;
+  height: 93vh;
+  min-height: 0;
+  border-radius: 20px;
+  transform-origin: center;
+  animation: nori-expand-in 0.22s ease both;
+}
+.nori-panel-expanded .nori-conversation {
+  padding: 24px max(24px, calc((100% - 720px) / 2));
+}
+.nori-panel-expanded .nori-message {
+  max-width: 760px;
+}
+.nori-panel-expanded .nori-bubble {
+  font-size: 13px;
+  padding: 14px 16px;
+}
+.nori-panel-expanded .nori-suggestions {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding-bottom: 18px;
+}
+.nori-panel-expanded .nori-composer-wrap {
+  padding: 16px max(24px, calc((100% - 760px) / 2)) 10px;
+}
+.nori-panel-expanded .nori-composer {
+  min-height: 52px;
+}
+.nori-panel-expanded .nori-composer input {
+  font-size: 13px;
+}
+.nori-panel-expanded .nori-context {
+  padding: 13px 22px;
+  font-size: 10px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@keyframes nori-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes nori-aura {
+  0% {
+    background-position: 0% 50%;
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.56;
+  }
+  100% {
+    background-position: 240% 50%;
+    opacity: 0.35;
+  }
+}
+@keyframes nori-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes nori-expand-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes nori-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nori-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes nori-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.45;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+@media (max-width: 700px) {
+  .nori-root {
+    right: 14px;
+    bottom: 15px;
+  }
+  .nori-launcher {
+    min-width: 174px;
+    height: 57px;
+    gap: 9px;
+  }
+  .nori-launcher-icon {
+    width: 42px;
+    height: 42px;
+  }
+  .nori-panel {
+    right: 10px;
+    bottom: 81px;
+    width: min(408px, calc(100vw - 20px));
+    height: min(690px, calc(100dvh - 100px));
+    min-height: min(490px, calc(100dvh - 100px));
+    border-radius: 19px;
+  }
+  .nori-panel-expanded {
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+  .nori-panel-expanded .nori-header {
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+  .nori-panel-expanded .nori-conversation {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .nori-panel-expanded .nori-composer-wrap {
+    padding-left: 13px;
+    padding-right: 13px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .nori-expanded:before {
+    display: none;
+  }
+  .nori-footer {
+    padding-bottom: max(9px, env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 390px) {
+  .nori-panel {
+    right: 7px;
+    width: calc(100vw - 14px);
+  }
+  .nori-root {
+    right: 13px;
+    bottom: 12px;
+  }
+  .nori-launcher {
+    min-width: 165px;
+    height: 54px;
+  }
+  .nori-context {
+    font-size: 8px;
+  }
+  .nori-suggestions > button {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nori-launcher,
+  .nori-launcher-aura,
+  .nori-panel,
+  .nori-message,
+  .nori-typing i {
+    animation: none !important;
+    transition: none !important;
+  }
+}
