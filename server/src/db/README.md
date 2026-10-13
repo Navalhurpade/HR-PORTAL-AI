@@ -1,0 +1,1 @@
+SQL migrations are applied in lexicographic order by `npm run db:migrate`. Applied migration filenames are recorded in `schema_migrations`. Create a new numbered SQL file for schema changes; avoid editing a migration after it has been applied to a shared database.
