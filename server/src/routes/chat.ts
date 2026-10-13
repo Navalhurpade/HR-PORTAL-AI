@@ -79,6 +79,8 @@ export async function registerChatRoute(app: FastifyInstance) {
         const content = await generateAssistantReply(
           {
             role: request.user.role,
+            department: request.user.department,
+            userId: request.user.sub,
           },
           history,
           request.body.message.trim(),
