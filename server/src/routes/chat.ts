@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { authenticate } from '../auth/guards.js';
-import { AiServiceError, generateAssistantReply, type ChatTurn } from '../ai/config.ai.js';
+import { AiServiceError, generateAssistantReply, type ChatTurn } from '../ai/ai.agent.js';
 
 export interface ChatRequestBody {
   /** A client-side conversation identifier; history is not persisted yet. */
