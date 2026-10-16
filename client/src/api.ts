@@ -45,6 +45,15 @@ export interface ApiPolicy {
   effectiveTo: string | null;
 }
 
+export interface ApiCompanyDocument {
+  id: string;
+  name: string;
+  size: number;
+  contentType: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
 export interface ChatTurn {
   role: 'user' | 'assistant';
   content: string;
@@ -74,7 +83,7 @@ export function clearAccessToken() {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body !== undefined) headers.set('Content-Type', 'application/json');
+  if (typeof init.body === 'string') headers.set('Content-Type', 'application/json');
   const token = getAccessToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
@@ -93,6 +102,26 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return payload as T;
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = getAccessToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, { headers });
+  } catch {
+    throw new ApiError('Could not reach the HR service. Check that the server is running.', 0);
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    if (response.status === 401) clearAccessToken();
+    throw new ApiError(payload.error ?? `Request failed (${response.status}).`, response.status);
+  }
+  return response.blob();
+}
+
 export const api = {
   async login(email: string, password: string) {
     const result = await request<{ accessToken: string; user: ApiUser }>('/auth/login', {
@@ -106,6 +135,15 @@ export const api = {
   leaves: async () => (await request<{ items: ApiLeave[] }>('/leaves?limit=100')).items,
   policies: async () => (await request<{ items: ApiPolicy[] }>('/leave-policies')).items,
   people: async () => (await request<{ items: ApiUser[] }>('/users?limit=100')).items,
+  companyDocuments: async () => (await request<{ items: ApiCompanyDocument[] }>('/company-documents')).items,
+  uploadCompanyDocument: (file: File) => {
+    const form = new FormData();
+    form.append('document', file);
+    return request<{ item: ApiCompanyDocument }>('/company-documents', { method: 'POST', body: form });
+  },
+  downloadCompanyDocument: (id: string) => requestBlob(`/company-documents/${encodeURIComponent(id)}`),
+  deleteCompanyDocument: (id: string) =>
+    request<void>(`/company-documents/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   createLeave: (input: { policyId: string; startDate: string; endDate: string; reason?: string }) =>
     request<{ item: ApiLeave }>('/leaves', { method: 'POST', body: JSON.stringify(input) }),
   decideLeave: (id: string, decision: 'approve' | 'reject') =>

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import './App.css';
 import { ChatAssistant } from './ChatAssistant';
+import { CompanyDocumentsPage } from './CompanyDocumentsPage';
 import {
   api,
   ApiError,
@@ -279,6 +280,7 @@ function App() {
 
   const menuItems = [
     { label: 'Overview', icon: LayoutDashboard },
+    { label: 'Documents', icon: FileText },
     ...(role === 'Employee' ? [{ label: 'My leave', icon: CalendarDays }] : [{ label: 'Requests', icon: FileText }]),
     ...(role !== 'Employee' ? [{ label: 'People', icon: Users }] : []),
   ];
@@ -409,7 +411,9 @@ function App() {
               <span className="loading-spinner" /> Syncing with your HR portal…
             </div>
           )}
-          {page === 'People' && role !== 'Employee' ? (
+          {page === 'Documents' ? (
+            <CompanyDocumentsPage user={user} />
+          ) : page === 'People' && role !== 'Employee' ? (
             <PeoplePage search={search} setSearch={setSearch} people={visiblePeople} />
           ) : page === 'Requests' && role !== 'Employee' ? (
             <RequestsPage requests={requests} onDecide={decideRequest} actionLoading={actionLoading} />

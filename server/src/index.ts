@@ -7,6 +7,8 @@ import { randomBytes } from 'node:crypto';
 import { pool } from './db/pool.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerChatRoute } from './routes/chat.js';
+import multipart from '@fastify/multipart';
+import { registerCompanyDocumentRoutes } from './routes/company-documents.js';
 import { registerLeaveRoutes } from './routes/leaves.js';
 import { registerUserRoutes } from './routes/users.js';
 
@@ -34,9 +36,11 @@ await app.register(cors, {
 });
 await app.register(rateLimit, { global: false });
 await app.register(jwt, { secret: jwtSecret });
+await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1, fields: 0 } });
 
 await app.register(registerAuthRoutes);
 await app.register(registerChatRoute);
+await app.register(registerCompanyDocumentRoutes);
 await app.register(registerLeaveRoutes);
 await app.register(registerUserRoutes);
 
