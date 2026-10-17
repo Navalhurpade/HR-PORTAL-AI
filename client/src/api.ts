@@ -59,6 +59,19 @@ export interface ChatTurn {
   content: string;
 }
 
+export interface ChatSourceUpdate {
+  id: string;
+  kind: 'document' | 'leave' | 'balance' | 'policy' | 'action';
+  title: string;
+  status: 'using' | 'used' | 'empty' | 'failed';
+  detail?: string;
+}
+
+export interface ChatResponse {
+  conversationId: string;
+  message: { role: 'assistant'; content: string; createdAt: string };
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -151,9 +164,78 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({}),
     }),
-  chat: (input: { message: string; conversationId: string; history: ChatTurn[] }) =>
-    request<{ conversationId: string; message: { role: 'assistant'; content: string; createdAt: string } }>('/chat', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
+  async chat(
+    input: { message: string; conversationId: string; history: ChatTurn[] },
+    onSourceUpdate: (source: ChatSourceUpdate) => void,
+    signal?: AbortSignal,
+  ): Promise<ChatResponse> {
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+    const token = getAccessToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}/chat/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(input),
+        signal,
+      });
+    } catch {
+      throw new ApiError('Could not reach the HR service. Check that the server is running.', 0);
+    }
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (response.status === 401) clearAccessToken();
+      throw new ApiError(payload.error ?? `Request failed (${response.status}).`, response.status);
+    }
+    if (!response.body) throw new ApiError('The HR service did not provide a chat stream.', response.status);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let assistantResponse: ChatResponse | undefined;
+    let completed = false;
+
+    function processEvent(block: string) {
+      let eventName = 'message';
+      const data: string[] = [];
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event:')) eventName = line.slice(6).trim();
+        else if (line.startsWith('data:')) data.push(line.slice(5).trimStart());
+      }
+      if (!data.length) return;
+
+      const eventData = data.join('\n');
+      if (eventName === 'source') {
+        onSourceUpdate(JSON.parse(eventData) as ChatSourceUpdate);
+      } else if (eventName === 'message') {
+        assistantResponse = JSON.parse(eventData) as ChatResponse;
+      } else if (eventName === 'error') {
+        const payload = JSON.parse(eventData) as { error?: string; statusCode?: number };
+        throw new ApiError(payload.error ?? 'Nori could not complete that response.', payload.statusCode ?? 500);
+      } else if (eventName === 'done') {
+        completed = true;
+      }
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      buffer = buffer.replace(/\r\n/g, '\n');
+      let boundary = buffer.indexOf('\n\n');
+      while (boundary !== -1) {
+        processEvent(buffer.slice(0, boundary));
+        buffer = buffer.slice(boundary + 2);
+        boundary = buffer.indexOf('\n\n');
+      }
+      if (done) break;
+    }
+    if (buffer.trim()) processEvent(buffer);
+    if (!completed || !assistantResponse) {
+      throw new ApiError('The chat stream ended before Nori completed a response.', response.status);
+    }
+    return assistantResponse;
+  },
 };

@@ -393,6 +393,100 @@
 .nori-typing i:nth-child(3) {
   animation-delay: 0.3s;
 }
+.nori-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+  max-width: 100%;
+  padding: 9px;
+  border: 1px solid #ede9f0;
+  border-radius: 10px;
+  background: #fff;
+}
+.nori-sources-live {
+  align-self: flex-start;
+  margin-left: 33px;
+}
+.nori-sources-heading {
+  padding: 0 2px 2px;
+  color: #92899d;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+}
+.nori-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.nori-source-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 7px;
+  background: #f3eff7;
+  color: #79648f;
+}
+.nori-source-document {
+  background: #f2f0fa;
+  color: #72649a;
+}
+.nori-source-leave,
+.nori-source-balance {
+  background: #eef7f2;
+  color: #5e9073;
+}
+.nori-source-policy {
+  background: #fcf3e9;
+  color: #a77942;
+}
+.nori-source-action {
+  background: #eff4fa;
+  color: #6580a1;
+}
+.nori-source-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.nori-source-title {
+  overflow: hidden;
+  color: #504b5a;
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nori-source-detail {
+  color: #9a94a1;
+  font-size: 9px;
+}
+.nori-source-status {
+  flex: none;
+  color: #688c75;
+}
+.nori-source-loading {
+  color: #8a78a0;
+  animation: nori-source-spin 1.1s linear infinite;
+}
+.nori-source-status-label {
+  flex: none;
+  color: #688c75;
+  font-size: 8px;
+}
+.nori-source-status-empty {
+  color: #a18a66;
+}
+.nori-source-status-failed {
+  color: #b36a6a;
+}
 .nori-suggestions {
   display: flex;
   flex-direction: column;
@@ -674,6 +768,11 @@
     transform: translateY(-4px);
   }
 }
+@keyframes nori-source-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 @media (max-width: 700px) {
   .nori-root {
     right: 14px;
@@ -746,7 +845,8 @@
   .nori-launcher-aura,
   .nori-panel,
   .nori-message,
-  .nori-typing i {
+  .nori-typing i,
+  .nori-source-loading {
     animation: none !important;
     transition: none !important;
   }

@@ -494,5 +494,7 @@ export async function SearchCompanyDocuments(query: string): Promise<CompanyDocu
      LIMIT 3`,
     [queryVector],
   );
+  console.log({ query, result });
+
   return result.rows;
 }

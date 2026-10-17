@@ -2,20 +2,32 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Bot,
+  CalendarDays,
   Check,
   ChevronDown,
+  CircleCheck,
   Command,
+  FileText,
+  LoaderCircle,
   Maximize2,
   Minimize2,
   Plus,
   Send,
+  ShieldCheck,
   Sparkles,
+  Wallet,
   X,
 } from 'lucide-react';
-import { api, type ApiUser, type ChatTurn } from './api';
+import { api, type ApiUser, type ChatSourceUpdate, type ChatTurn } from './api';
 import './ChatAssistant.css';
 
-type ChatMessage = { id: number; role: 'assistant' | 'user'; text: string; time: string };
+type ChatMessage = {
+  id: number;
+  role: 'assistant' | 'user';
+  text: string;
+  time: string;
+  sources?: ChatSourceUpdate[];
+};
 type ChatAssistantProps = { user: ApiUser };
 
 const initialMessage: ChatMessage = {
@@ -29,6 +41,44 @@ function currentTime() {
   return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date());
 }
 
+function SourceIcon({ kind }: { kind: ChatSourceUpdate['kind'] }) {
+  if (kind === 'document') return <FileText size={14} />;
+  if (kind === 'leave') return <CalendarDays size={14} />;
+  if (kind === 'balance') return <Wallet size={14} />;
+  if (kind === 'policy') return <ShieldCheck size={14} />;
+  return <CircleCheck size={14} />;
+}
+
+function SourceList({ sources, live = false }: { sources: ChatSourceUpdate[]; live?: boolean }) {
+  if (!sources.length) return null;
+  return (
+    <div className={`nori-sources ${live ? 'nori-sources-live' : ''}`} aria-live={live ? 'polite' : undefined}>
+      <div className="nori-sources-heading">{live ? 'Checking sources' : 'Sources & activity'}</div>
+      {sources.map((source) => (
+        <div className="nori-source" key={source.id}>
+          <span className={`nori-source-icon nori-source-${source.kind}`}>
+            <SourceIcon kind={source.kind} />
+          </span>
+          <span className="nori-source-copy">
+            <span className="nori-source-title">{source.title}</span>
+            {source.detail && <span className="nori-source-detail">{source.detail}</span>}
+          </span>
+          {source.status === 'using' ? (
+            <LoaderCircle className="nori-source-status nori-source-loading" size={14} aria-label="In progress" />
+          ) : (
+            <span
+              className={`nori-source-status-label nori-source-status-${source.status}`}
+              aria-label={source.status}
+            >
+              {source.status === 'used' ? 'Used' : source.status === 'empty' ? 'No results' : 'Unavailable'}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ChatAssistant({ user }: ChatAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -36,8 +86,10 @@ export function ChatAssistant({ user }: ChatAssistantProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const [isThinking, setIsThinking] = useState(false);
+  const [liveSources, setLiveSources] = useState<ChatSourceUpdate[]>([]);
   const [showWelcome, setShowWelcome] = useState(true);
   const conversationIdRef = useRef<string>(conversationId);
+  const activeRequestRef = useRef<AbortController | null>(null);
   const messageSequence = useRef(1);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +105,10 @@ export function ChatAssistant({ user }: ChatAssistantProps) {
     }
   }, [isOpen, messages, isThinking]);
 
+  useEffect(() => {
+    if (isOpen) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [isOpen, liveSources]);
+
   async function sendMessage(value: string) {
     const text = value.trim();
     if (!text || isThinking) return;
@@ -67,15 +123,33 @@ export function ChatAssistant({ user }: ChatAssistantProps) {
     setMessages((current) => [...current, userMessage]);
     setInput('');
     setIsThinking(true);
+    setLiveSources([]);
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
+    const sources = new Map<string, ChatSourceUpdate>();
 
     try {
-      const result = await api.chat({ message: text, conversationId: requestConversationId, history });
+      const result = await api.chat(
+        { message: text, conversationId: requestConversationId, history },
+        (source) => {
+          if (conversationIdRef.current !== requestConversationId) return;
+          sources.set(source.id, source);
+          setLiveSources([...sources.values()]);
+        },
+        controller.signal,
+      );
       if (conversationIdRef.current !== requestConversationId) return;
       conversationIdRef.current = result.conversationId;
       setConversationId(result.conversationId);
       setMessages((current) => [
         ...current,
-        { id: ++messageSequence.current, role: 'assistant', text: result.message.content, time: currentTime() },
+        {
+          id: ++messageSequence.current,
+          role: 'assistant',
+          text: result.message.content,
+          time: currentTime(),
+          sources: [...sources.values()],
+        },
       ]);
     } catch (error) {
       if (conversationIdRef.current !== requestConversationId) return;
@@ -86,18 +160,26 @@ export function ChatAssistant({ user }: ChatAssistantProps) {
           role: 'assistant',
           text: error instanceof Error ? error.message : 'Nori is temporarily unavailable. Please try again.',
           time: currentTime(),
+          sources: [...sources.values()],
         },
       ]);
     } finally {
-      if (conversationIdRef.current === requestConversationId) setIsThinking(false);
+      if (activeRequestRef.current === controller) activeRequestRef.current = null;
+      if (conversationIdRef.current === requestConversationId) {
+        setIsThinking(false);
+        setLiveSources([]);
+      }
     }
   }
 
   function resetConversation() {
+    activeRequestRef.current?.abort();
+    activeRequestRef.current = null;
     const nextConversationId = crypto.randomUUID();
     conversationIdRef.current = nextConversationId;
     setConversationId(nextConversationId);
     setMessages([{ ...initialMessage, id: ++messageSequence.current }]);
+    setLiveSources([]);
     setShowWelcome(true);
     setInput('');
     setIsThinking(false);
@@ -172,14 +254,17 @@ export function ChatAssistant({ user }: ChatAssistantProps) {
                   </span>
                 )}
                 <div className="nori-message-content">
-                  <div className="nori-bubble">
-                    {message.text.split('\n').map((line, index, lines) => (
-                      <span key={`${message.id}-${index}`}>
-                        {line}
-                        {index < lines.length - 1 && <br />}
-                      </span>
-                    ))}
-                  </div>
+                  {message.text && (
+                    <div className="nori-bubble">
+                      {message.text.split('\n').map((line, index, lines) => (
+                        <span key={`${message.id}-${index}`}>
+                          {line}
+                          {index < lines.length - 1 && <br />}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {message.role === 'assistant' && message.sources && <SourceList sources={message.sources} />}
                   <span className="nori-message-time">
                     {message.time}
                     {message.role === 'user' && <Check size={12} />}
@@ -200,6 +285,7 @@ export function ChatAssistant({ user }: ChatAssistantProps) {
                 <span className="sr-only">Nori is thinking</span>
               </div>
             )}
+            {isThinking && <SourceList sources={liveSources} live />}
             <div ref={endRef} />
           </div>
 

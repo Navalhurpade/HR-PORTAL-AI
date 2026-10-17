@@ -4,7 +4,9 @@ import { ChatGoogle } from '@langchain/google';
 
 import { createAgent } from 'langchain';
 import type { UserRole } from '../auth/types.js';
-import { createAssistantTools } from './tools.js';
+import { createAssistantTools, type AssistantSourceUpdate } from './tools.js';
+
+export type { AssistantSourceUpdate } from './tools.js';
 
 const GROQ_MODEL = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -59,7 +61,12 @@ function isProviderError(error: unknown): boolean {
   return 'status' in error && typeof error.status === 'number';
 }
 
-export async function generateAssistantReply(context: AssistantContext, history: ChatTurn[], message: string) {
+export async function generateAssistantReply(
+  context: AssistantContext,
+  history: ChatTurn[],
+  message: string,
+  onSourceUpdate?: (source: AssistantSourceUpdate) => void,
+) {
   const apiKey = process.env.GOOGLE_API_KEY?.trim();
   const modelName = process.env.GOOGLE_MODEL?.trim();
   if (!apiKey || apiKey === 'key_here' || !modelName) {
@@ -122,7 +129,7 @@ export async function generateAssistantReply(context: AssistantContext, history:
 
   const agent = createAgent({
     model,
-    tools: createAssistantTools(context.userId),
+    tools: createAssistantTools(context.userId, onSourceUpdate),
     systemPrompt,
   });
 
