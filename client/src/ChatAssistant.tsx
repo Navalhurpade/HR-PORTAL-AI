@@ -18,6 +18,8 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api, type ApiUser, type ChatSourceUpdate, type ChatTurn } from './api';
 import './ChatAssistant.css';
 
@@ -51,16 +53,42 @@ function SourceIcon({ kind }: { kind: ChatSourceUpdate['kind'] }) {
 
 function SourceList({ sources, live = false }: { sources: ChatSourceUpdate[]; live?: boolean }) {
   if (!sources.length) return null;
+  const documentSearch = sources.find((source) => source.id === 'company-document-search');
+  const foundDocuments = sources.some((source) => source.id.startsWith('document-'));
+  const visibleSources = sources.filter(
+    (source) =>
+      source.id !== 'company-document-search' ||
+      (!live && source.status !== 'used'),
+  );
+  if (!live && !visibleSources.length) return null;
+  const heading =
+    live && documentSearch?.status === 'using'
+      ? 'Searching company documents…'
+      : live && documentSearch?.status === 'used' && foundDocuments
+        ? 'Found these documents'
+        : live && documentSearch?.status === 'empty'
+          ? 'No matching company documents'
+          : live && documentSearch?.status === 'failed'
+            ? 'Company document search failed'
+            : live
+              ? 'Checking sources'
+              : 'Sources & activity';
   return (
     <div className={`nori-sources ${live ? 'nori-sources-live' : ''}`} aria-live={live ? 'polite' : undefined}>
-      <div className="nori-sources-heading">{live ? 'Checking sources' : 'Sources & activity'}</div>
-      {sources.map((source) => (
+      <div className="nori-sources-heading">{heading}</div>
+      {visibleSources.map((source) => (
         <div className="nori-source" key={source.id}>
           <span className={`nori-source-icon nori-source-${source.kind}`}>
             <SourceIcon kind={source.kind} />
           </span>
           <span className="nori-source-copy">
-            <span className="nori-source-title">{source.title}</span>
+            <span className="nori-source-title">
+              {source.id === 'company-document-search' && source.status === 'empty'
+                ? 'No matching company documents'
+                : source.id === 'company-document-search' && source.status === 'failed'
+                  ? 'Company document search failed'
+                  : source.title}
+            </span>
             {source.detail && <span className="nori-source-detail">{source.detail}</span>}
           </span>
           {source.status === 'using' ? (
@@ -256,12 +284,18 @@ export function ChatAssistant({ user }: ChatAssistantProps) {
                 <div className="nori-message-content">
                   {message.text && (
                     <div className="nori-bubble">
-                      {message.text.split('\n').map((line, index, lines) => (
-                        <span key={`${message.id}-${index}`}>
-                          {line}
-                          {index < lines.length - 1 && <br />}
-                        </span>
-                      ))}
+                      {message.role === 'assistant' ? (
+                        <div className="nori-markdown">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        message.text.split('\n').map((line, index, lines) => (
+                          <span key={`${message.id}-${index}`}>
+                            {line}
+                            {index < lines.length - 1 && <br />}
+                          </span>
+                        ))
+                      )}
                     </div>
                   )}
                   {message.role === 'assistant' && message.sources && <SourceList sources={message.sources} />}

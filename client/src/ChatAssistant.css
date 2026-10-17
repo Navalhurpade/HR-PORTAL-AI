@@ -345,6 +345,104 @@
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
+.nori-markdown {
+  white-space: normal;
+}
+.nori-markdown > :first-child {
+  margin-top: 0;
+}
+.nori-markdown > :last-child {
+  margin-bottom: 0;
+}
+.nori-markdown p {
+  margin: 0 0 0.7em;
+}
+.nori-markdown h1,
+.nori-markdown h2,
+.nori-markdown h3,
+.nori-markdown h4 {
+  margin: 0.9em 0 0.4em;
+  color: #393444;
+  line-height: 1.35;
+}
+.nori-markdown h1 {
+  font-size: 1.35em;
+}
+.nori-markdown h2 {
+  font-size: 1.2em;
+}
+.nori-markdown h3,
+.nori-markdown h4 {
+  font-size: 1.08em;
+}
+.nori-markdown ul,
+.nori-markdown ol {
+  margin: 0 0 0.7em;
+  padding-left: 1.5em;
+}
+.nori-markdown li + li {
+  margin-top: 0.2em;
+}
+.nori-markdown a {
+  color: #66547f;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.nori-markdown blockquote {
+  margin: 0 0 0.7em;
+  padding-left: 0.8em;
+  border-left: 3px solid #d7ccdf;
+  color: #746d7d;
+}
+.nori-markdown code {
+  padding: 0.12em 0.35em;
+  border-radius: 4px;
+  background: #eeeaf2;
+  color: #55466a;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+}
+.nori-markdown pre {
+  max-width: 100%;
+  margin: 0 0 0.7em;
+  padding: 10px;
+  overflow-x: auto;
+  border: 1px solid #e9e4ed;
+  border-radius: 7px;
+  background: #f0edf3;
+}
+.nori-markdown pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+.nori-markdown hr {
+  margin: 0.8em 0;
+  border: 0;
+  border-top: 1px solid #e5e0e9;
+}
+.nori-markdown table {
+  display: block;
+  max-width: 100%;
+  margin: 0 0 0.7em;
+  overflow-x: auto;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+.nori-markdown th,
+.nori-markdown td {
+  padding: 5px 8px;
+  border: 1px solid #e3dee8;
+  text-align: left;
+}
+.nori-markdown th {
+  background: #efebf2;
+  color: #494253;
+  font-weight: 700;
+}
 .nori-message-user .nori-bubble {
   border-color: #5b4b75;
   border-radius: 13px 13px 4px 13px;

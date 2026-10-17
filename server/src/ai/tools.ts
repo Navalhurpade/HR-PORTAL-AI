@@ -225,6 +225,12 @@ export function createAssistantTools(userId: string, onSourceUpdate?: (source: A
         });
         try {
           const results = await SearchCompanyDocuments(searchText);
+          onSourceUpdate?.({
+            id: 'company-document-search',
+            kind: 'document',
+            title: 'Company documents',
+            status: results.length ? 'used' : 'empty',
+          });
           const documents = new Map<string, { documentName: string; count: number }>();
           for (const result of results) {
             const document = documents.get(result.documentId);
