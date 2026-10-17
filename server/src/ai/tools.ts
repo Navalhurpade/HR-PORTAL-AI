@@ -10,6 +10,8 @@ import {
   applyLeave,
   updateLeaveInputSchema,
   updateLeave,
+  SearchCompanyDocuments,
+  searchCompanyDocumentsSchema,
 } from './tools.util.js';
 
 const getLeavesDataSchema = z
@@ -60,6 +62,12 @@ export function createAssistantTools(userId: string) {
       description:
         'Update one of the signed-in user’s pending leave requests only when they explicitly ask to change it. Requires the leave request ID and at least one field to update.',
       schema: updateLeaveInputSchema,
+    }),
+    tool(async ({ searchText }) => SearchCompanyDocuments(searchText), {
+      name: 'searchCompanyDocuments',
+      description:
+        'Search the uploaded company documents for evidence relevant to a policy or benefits question. Base factual answers only on the returned text chunks.',
+      schema: searchCompanyDocumentsSchema,
     }),
   ];
 }

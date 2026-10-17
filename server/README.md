@@ -44,7 +44,7 @@ The command requires a password of at least 12 characters and stores only a bcry
 
 - `GET /company-documents` and `GET /company-documents/:id` — any signed-in user can list and download shared company documents.
 - `POST /company-documents` and `DELETE /company-documents/:id` — HR and super admins only.
-- Uploads accept PDF, Word, Excel, PowerPoint, RTF, CSV, and plain-text files up to 25 MB. Files and their metadata are stored in `storage/company-documents` under the server working directory by default; set `COMPANY_DOCUMENTS_DIR` to change the location. The local storage directory is excluded from version control.
+- Uploads accept PDF, Word, Excel, PowerPoint, RTF, CSV, and plain-text files up to 25 MB. File contents are stored in `storage/company-documents` under the server working directory by default; document metadata and each extracted text chunk with its 3,072-dimensional Gemini embedding are stored in PostgreSQL. Set `COMPANY_DOCUMENTS_DIR` to change the file location. Set `GOOGLE_API_KEY` to enable document embedding generation. The local storage directory is excluded from version control.
 
 ## Nori chat API
 

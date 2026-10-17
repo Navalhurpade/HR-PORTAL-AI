@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { pool } from '../db/pool.js';
+import { generateTextEmbedding } from './embbeding.ai.js';
 
 export const leaveStatusSchema = z.enum(['pending', 'approved', 'rejected', 'cancelled']);
 
@@ -74,6 +75,12 @@ export const updateLeaveInputSchema = z
       policyId !== undefined || startDate !== undefined || endDate !== undefined || reason !== undefined,
     'Provide at least one field to update.',
   );
+
+export const searchCompanyDocumentsSchema = z
+  .object({
+    searchText: z.string().trim().min(1).max(2000),
+  })
+  .strict();
 
 interface LeaveRequestMutationRow {
   leave_request_id: string;
@@ -461,4 +468,31 @@ export async function updateLeave(
   } finally {
     client.release();
   }
+}
+
+export interface CompanyDocumentSearchResult {
+  documentId: string;
+  documentName: string;
+  chunkIndex: number;
+  chunkText: string;
+  similarity: number;
+}
+
+export async function SearchCompanyDocuments(query: string): Promise<CompanyDocumentSearchResult[]> {
+  const embedding = await generateTextEmbedding(query);
+  const queryVector = `[${embedding.join(',')}]`;
+  const result = await pool.query<CompanyDocumentSearchResult>(
+    `SELECT
+       document_id AS "documentId",
+       name AS "documentName",
+       chunk_index AS "chunkIndex",
+       chunk_text AS "chunkText",
+       1 - (embedding <=> $1::vector) AS similarity
+     FROM company_document_chunks
+     JOIN company_documents USING (document_id)
+     ORDER BY embedding <=> $1::vector
+     LIMIT 3`,
+    [queryVector],
+  );
+  return result.rows;
 }
