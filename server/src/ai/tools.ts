@@ -13,6 +13,7 @@ import {
   SearchCompanyDocuments,
   searchCompanyDocumentsSchema,
 } from './tools.util.js';
+console.log(new Date().toDateString());
 
 export interface AssistantSourceUpdate {
   id: string;
@@ -24,21 +25,36 @@ export interface AssistantSourceUpdate {
 
 const getLeavesDataSchema = z
   .object({
-    filters: getLeavesDataFiltersSchema.optional(),
+    filters: getLeavesDataFiltersSchema
+      .optional()
+      .describe(
+        'Optional filters for the leave requests to return. Leave empty to return the most recent requests across all statuses.',
+      ),
   })
-  .strict();
+  .strict()
+  .describe("Request for retrieving the signed-in user's recent leave requests.");
 
 const getLeavePolicySchema = z
   .object({
-    leaveType: leaveTypeSchema.optional(),
+    leaveType: leaveTypeSchema
+      .optional()
+      .describe('Optional leave type to narrow policy results. Example: casual, sick, earned, or parental.'),
   })
-  .strict();
+  .strict()
+  .describe("Request for retrieving the company's leave policy rules.");
 
 const getMyLeaveBalanceSchema = z
   .object({
-    year: z.number().int().gte(1000).lte(9999).optional(),
+    year: z.coerce
+      .number()
+      .int()
+      .min(1900)
+      .max(9999)
+      .optional()
+      .describe('Optional calendar year to check, such as 2026. If omitted, the current year is used automatically.'),
   })
-  .strict();
+  .strict()
+  .describe("Request for retrieving the signed-in user's leave balance for a specific year.");
 
 export function createAssistantTools(userId: string, onSourceUpdate?: (source: AssistantSourceUpdate) => void) {
   return [
@@ -73,7 +89,7 @@ export function createAssistantTools(userId: string, onSourceUpdate?: (source: A
       {
         name: 'getLeavesData',
         description:
-          "Fetch the signed-in user's 10 most recently submitted leave requests. Optionally filter by status and a date range.",
+          "Retrieve the signed-in user's most recent leave requests, ordered newest first. Use this to answer questions about leave history, status, or date ranges. Optionally filter by status and overlap dates.",
         schema: getLeavesDataSchema,
       },
     ),
@@ -107,7 +123,8 @@ export function createAssistantTools(userId: string, onSourceUpdate?: (source: A
       },
       {
         name: 'getLeavePolicy',
-        description: 'Return the currently effective company leave policies. Optionally filter by a leave type.',
+        description:
+          'Return the currently effective company leave policies and rules. Use this when a user asks about eligibility, annual allowance, carryover, documentation requirements, or a specific leave type.',
         schema: getLeavePolicySchema,
       },
     ),
@@ -143,7 +160,7 @@ export function createAssistantTools(userId: string, onSourceUpdate?: (source: A
       {
         name: 'getMyLeaveBalance',
         description:
-          "Return the signed-in user's leave balance for the specified calendar year. If omitted, use the current year.",
+          'Return the signed-in user\'s available leave balance for a specified calendar year. If the year is omitted, use the current year automatically. Use this to answer questions like "How much leave do I have left?"',
         schema: getMyLeaveBalanceSchema,
       },
     ),
@@ -177,7 +194,7 @@ export function createAssistantTools(userId: string, onSourceUpdate?: (source: A
       {
         name: 'applyLeave',
         description:
-          'Submit a leave request for the signed-in user only when they explicitly ask to apply. Do not submit based on a question, hypothetical, or implied intent. Requires a leave type, start date, and end date.',
+          'Create a leave request for the signed-in user only when the user explicitly asks to submit or apply for leave. Require a leave type, start date, and end date. Do not create a request from a question, hypothetical, or implied intention.',
         schema: createLeaveInputSchema,
       },
     ),
@@ -211,7 +228,7 @@ export function createAssistantTools(userId: string, onSourceUpdate?: (source: A
       {
         name: 'updateLeave',
         description:
-          'Update one of the signed-in user’s pending leave requests only when they explicitly ask to change it. Requires the leave request ID and at least one field to update.',
+          'Update an existing leave request for the signed-in user only when they explicitly ask to change it. Requires the leave request ID and at least one field to update, such as dates, policy, or reason.',
         schema: updateLeaveInputSchema,
       },
     ),
@@ -261,7 +278,7 @@ export function createAssistantTools(userId: string, onSourceUpdate?: (source: A
       {
         name: 'searchCompanyDocuments',
         description:
-          'Search the uploaded company documents for evidence relevant to a policy or benefits question. Base factual answers only on the returned text chunks.',
+          'Search uploaded company documents and policy text for evidence relevant to a policy, benefits, or HR question. Use this when the answer depends on company documents rather than general knowledge. Base factual answers only on the returned excerpts.',
         schema: searchCompanyDocumentsSchema,
       },
     ),

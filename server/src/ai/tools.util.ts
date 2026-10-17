@@ -2,19 +2,26 @@ import { z } from 'zod';
 import { pool } from '../db/pool.js';
 import { generateTextEmbedding } from './embbeding.ai.js';
 
-export const leaveStatusSchema = z.enum(['pending', 'approved', 'rejected', 'cancelled']);
+export const leaveStatusSchema = z
+  .enum(['pending', 'approved', 'rejected', 'cancelled'])
+  .describe('Leave request status. Use this to filter by whether a request is pending, approved, rejected, or cancelled.');
 
-export const leaveTypeSchema = z.enum(['casual', 'sick', 'earned', 'parental']);
+export const leaveTypeSchema = z
+  .enum(['casual', 'sick', 'earned', 'parental'])
+  .describe(
+    'Leave type. Supported values are casual, sick, earned, and parental. Use the exact value when filtering policies or submitting a leave request.',
+  );
 
 export type LeaveStatus = z.infer<typeof leaveStatusSchema>;
 
 export const getLeavesDataFiltersSchema = z
   .object({
-    status: leaveStatusSchema.optional(),
-    fromDate: z.iso.date().optional(),
-    toDate: z.iso.date().optional(),
+    status: leaveStatusSchema.optional().describe('Filter leave requests by status. Leave this empty to include all states.'),
+    fromDate: z.iso.date().optional().describe('Only include leave requests whose period overlaps on or after this date (YYYY-MM-DD).'),
+    toDate: z.iso.date().optional().describe('Only include leave requests whose period overlaps on or before this date (YYYY-MM-DD).'),
   })
-  .strict();
+  .strict()
+  .describe('Optional filters for retrieving the signed-in user\'s leave requests.');
 
 export type GetLeavesDataFilters = z.infer<typeof getLeavesDataFiltersSchema>;
 
@@ -54,22 +61,24 @@ export interface LeaveBalanceRecord {
 
 export const createLeaveInputSchema = z
   .object({
-    leaveType: leaveTypeSchema,
-    startDate: z.iso.date(),
-    endDate: z.iso.date(),
-    reason: z.string().max(2000).optional(),
+    leaveType: leaveTypeSchema.describe('The type of leave being requested. Example: casual, sick, earned, or parental.'),
+    startDate: z.iso.date().describe('The first day of the leave period in YYYY-MM-DD format.'),
+    endDate: z.iso.date().describe('The last day of the leave period in YYYY-MM-DD format. Must be on or after startDate.'),
+    reason: z.string().max(2000).optional().describe('Optional explanation for the leave request. Maximum 2000 characters.'),
   })
-  .strict();
+  .strict()
+  .describe('Input for creating a new leave request for the signed-in user.');
 
 export const updateLeaveInputSchema = z
   .object({
-    leaveRequestId: z.uuid(),
-    policyId: z.uuid().optional(),
-    startDate: z.iso.date().optional(),
-    endDate: z.iso.date().optional(),
-    reason: z.string().max(2000).optional(),
+    leaveRequestId: z.uuid().describe('The UUID of the leave request to update.'),
+    policyId: z.uuid().optional().describe('Optional policy to switch the leave request to. Use only when the leave type or policy has changed.'),
+    startDate: z.iso.date().optional().describe('Optional new start date for the leave request in YYYY-MM-DD format.'),
+    endDate: z.iso.date().optional().describe('Optional new end date for the leave request in YYYY-MM-DD format.'),
+    reason: z.string().max(2000).optional().describe('Optional revised reason for the leave request. Maximum 2000 characters.'),
   })
   .strict()
+  .describe('Input for updating an existing leave request.')
   .refine(
     ({ policyId, startDate, endDate, reason }) =>
       policyId !== undefined || startDate !== undefined || endDate !== undefined || reason !== undefined,
@@ -78,9 +87,10 @@ export const updateLeaveInputSchema = z
 
 export const searchCompanyDocumentsSchema = z
   .object({
-    searchText: z.string().trim().min(1).max(2000),
+    searchText: z.string().trim().min(1).max(2000).describe('Natural-language search query for finding relevant company documents or policy excerpts.'),
   })
-  .strict();
+  .strict()
+  .describe('Search request for company documents and policy text.');
 
 interface LeaveRequestMutationRow {
   leave_request_id: string;
@@ -278,6 +288,8 @@ export async function getMyLeaveBalance(
 
 export async function getLeavePolicy(leaveType?: string): Promise<LeavePolicyRecord[]> {
   const normalizedLeaveType = leaveType?.trim() || null;
+  console.log({ leaveType });
+
   const result = await pool.query<{
     policy_id: string;
     leave_type: string;

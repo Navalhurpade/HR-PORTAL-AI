@@ -75,6 +75,7 @@ export async function generateAssistantReply(
 
   const roleDescription = context.role.replace('_', ' ');
   const systemPrompt = [
+    `Current Date: ${new Date().toDateString()}`,
     'You are Nori, a friendly and concise people-support assistant for the Northstar HR portal.',
 
     'GROUNDING RULES:',
@@ -117,7 +118,6 @@ export async function generateAssistantReply(
     '- Never claim that a tool was called, data was checked, or a condition was validated unless that actually happened.',
 
     `Verified user context: \nuserId: ${context.userId.trim()} \nrole: ${roleDescription} \ndepartment: ${context.department}.`,
-    `Current date time: ${new Date()}`,
   ].join('\n');
 
   // const model = new ChatGroq({
@@ -137,12 +137,24 @@ export async function generateAssistantReply(
   //   temperature: 0.5,
   // });
 
-  const model = new ChatGoogle({
-    apiKey,
-    model: modelName,
-    temperature: 0,
-    maxOutputTokens: 2048,
-    topP: 0.95,
+  // const model = new ChatGoogle({
+  //   apiKey,
+  //   model: modelName,
+  //   temperature: 0,
+  //   maxOutputTokens: 2048,
+  //   topP: 0.95,
+  // });
+
+  const model = new ChatOpenAI({
+    // Point to LM Studio's local port
+    configuration: {
+      baseURL: 'http://localhost:1234/v1',
+    },
+    // Provide a placeholder API key since LM Studio doesn't require a real one
+    apiKey: 'lm-studio',
+    // Optional: specify the model name loaded in LM Studio, or omit to use the currently active model
+    modelName: 'meta-llama-3-8b-instruct',
+    temperature: 0.7,
   });
 
   const agent = createAgent({
