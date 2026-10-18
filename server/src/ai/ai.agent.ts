@@ -3,8 +3,6 @@ import { ChatOpenAI } from '@langchain/openai';
 import { ChatGoogle } from '@langchain/google';
 
 import { createAgent } from 'langchain';
-import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { UserRole } from '../auth/types.js';
 import { createAssistantTools, type AssistantSourceUpdate } from './tools.js';
 
@@ -23,14 +21,6 @@ export interface AssistantContext {
   role: UserRole;
   userId: string;
   department: string;
-}
-
-export interface AssistantDependencies {
-  model?: BaseChatModel;
-  createTools?: (
-    userId: string,
-    onSourceUpdate?: (source: AssistantSourceUpdate) => void,
-  ) => StructuredToolInterface[];
 }
 
 export class AiServiceError extends Error {
@@ -76,11 +66,9 @@ export async function generateAssistantReply(
   history: ChatTurn[],
   message: string,
   onSourceUpdate?: (source: AssistantSourceUpdate) => void,
-  dependencies: AssistantDependencies = {},
 ) {
   const apiKey = process.env.GOOGLE_API_KEY?.trim();
-  const modelName = process.env.GOOGLE_MODEL?.trim();
-  if (!apiKey || apiKey === 'key_here' || !modelName) {
+  if (!apiKey || apiKey === 'key_here') {
     throw new AiServiceError('The AI assistant is not configured yet.', 503, 'AI_NOT_CONFIGURED');
   }
 
@@ -148,31 +136,29 @@ export async function generateAssistantReply(
   //   temperature: 0.5,
   // });
 
-  // const model = new ChatGoogle({
-  //   apiKey,
-  //   model: modelName,
-  //   temperature: 0,
-  //   maxOutputTokens: 2048,
-  //   topP: 0.95,
-  // });
+  const model = new ChatGoogle({
+    apiKey,
+    model: process.env.GOOGLE_MODEL,
+    temperature: 0,
+    maxOutputTokens: 2048,
+    topP: 0.95,
+  });
 
-  const model =
-    dependencies.model ??
-    new ChatOpenAI({
-      // Point to LM Studio's local port
-      configuration: {
-        baseURL: 'http://localhost:1234/v1',
-      },
-      // Provide a placeholder API key since LM Studio doesn't require a real one
-      apiKey: 'lm-studio',
-      // Optional: specify the model name loaded in LM Studio, or omit to use the currently active model
-      modelName: 'meta-llama-3-8b-instruct',
-      temperature: 0.7,
-    });
+  // const model = new ChatOpenAI({
+  //   // Point to LM Studio's local port
+  //   configuration: {
+  //     baseURL: 'http://localhost:1234/v1',
+  //   },
+  //   // Provide a placeholder API key since LM Studio doesn't require a real one
+  //   apiKey: 'lm-studio',
+  //   // Optional: specify the model name loaded in LM Studio, or omit to use the currently active model
+  //   modelName: 'meta-llama-3-8b-instruct',
+  //   temperature: 0.7,
+  // });
 
   const agent = createAgent({
     model,
-    tools: (dependencies.createTools ?? createAssistantTools)(context.userId, onSourceUpdate),
+    tools: createAssistantTools(context.userId, onSourceUpdate),
     systemPrompt,
   });
 
@@ -187,17 +173,7 @@ export async function generateAssistantReply(
       },
       { recursionLimit: MAX_TOOL_ROUNDS * 2 + 1 },
     );
-
-    console.dir(
-      {
-        result,
-      },
-      { depth: null },
-    );
-    console.log({ result });
   } catch (error) {
-    console.log({ error });
-
     if (isTimeoutError(error)) {
       throw new AiServiceError('Nori took too long to respond. Please try again.', 504, 'AI_TIMEOUT');
     }

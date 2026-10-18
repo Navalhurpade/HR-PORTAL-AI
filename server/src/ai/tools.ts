@@ -13,7 +13,6 @@ import {
   SearchCompanyDocuments,
   searchCompanyDocumentsSchema,
 } from './tools.util.js';
-console.log(new Date().toDateString());
 
 export interface AssistantSourceUpdate {
   id: string;

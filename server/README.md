@@ -9,7 +9,7 @@ Fastify + TypeScript backend with PostgreSQL, bearer-token authentication, role-
 3. Run `npm install`.
 4. Run `npm run db:migrate` to create the schema.
 5. Set `JWT_SECRET` to a random secret of at least 32 characters for stable tokens (required in production). Without it, local development generates an ephemeral secret on startup.
-6. Set `GROQ_API_KEY` in `.env` to enable Nori. The key is used only by the server; never add it to the client or commit it. Optionally set `GROQ_MODEL` to override the default.
+6. Set `GOOGLE_API_KEY` in `.env` for company-document embeddings. The key is used only by the server; never add it to the client or commit it.
 7. Provision the initial administrator out-of-band with the secure user creation command below.
 8. Run `npm run dev`; the API listens on `http://127.0.0.1:3001` by default.
 9. The API checks PostgreSQL before listening and logs a successful connection. `GET /health` checks database availability.
@@ -50,9 +50,28 @@ The command requires a password of at least 12 characters and stores only a bcry
 
 - `POST /chat` — requires a bearer token and is limited to 20 requests per minute.
 - Request JSON: `{ "message": "...", "conversationId": "optional-uuid", "history": [{ "role": "user|assistant", "content": "..." }] }`. Messages are non-blank and at most 4,000 characters; history is limited to 12 turns/12,000 aggregate characters. Unknown fields (including client-supplied user IDs or roles) are rejected.
-- Uses a LangChain agent with the Groq chat integration (`@langchain/groq`), defaulting to `llama-3.3-70b-versatile`, a 30-second timeout, and 2,048 output tokens. The leave-data tool is defined with Zod schemas and only queries data for the signed-in user.
+- Uses a LangChain agent with the OpenAI-compatible local model endpoint at `http://localhost:1234/v1` (LM Studio), using `meta-llama-3-8b-instruct`. The leave-data tools query records for the signed-in user.
 - The system prompt includes the signed-in user's verified ID, role, and department; verified leave records are sent only when the user-scoped tool retrieves them. Name, email, and other employee data are not sent. Conversation history is currently held in the browser and sent with each message; it is not persisted in PostgreSQL. Do not treat the model as an approval/decision system or send sensitive HR/medical details in chat until provider data handling and retention are reviewed.
-- Missing `GROQ_API_KEY` returns `503 AI_NOT_CONFIGURED`; provider/network failures return sanitized error codes and do not expose upstream response bodies or credentials.
+- Missing `GOOGLE_API_KEY` returns `503 AI_NOT_CONFIGURED`; provider/network failures return sanitized error codes and do not expose upstream response bodies or credentials.
+
+## Live agent integration tests
+
+The five Nori behavior tests use the real local chat model, a separate PostgreSQL test database, and the real leave/document tools. They are skipped unless explicitly enabled and do not install test doubles. The scenarios intend no HR mutations; keep the database disposable in case a faulty agent attempts an unexpected action.
+
+1. Configure the server environment as above, start LM Studio at `http://localhost:1234/v1`, and load the model named `meta-llama-3-8b-instruct`.
+2. Set `AI_AGENT_TEST_DATABASE_URL` to a separate, migrated, disposable test database containing active leave policies, an employee account, and company-document chunks. Its database name must include `test`, `sandbox`, or `integration`; the suite refuses to use `DATABASE_URL` as its test database. Do not run these tests against production data.
+3. Set `AI_AGENT_TEST_USER_ID` to an active employee in that test database.
+4. From `server`, set `AI_AGENT_INTEGRATION=1` and run `npm run test:agent`.
+
+For PowerShell:
+
+```powershell
+$env:AI_AGENT_INTEGRATION = '1'
+$env:AI_AGENT_TEST_USER_ID = 'your-test-employee-id'
+npm run test:agent
+```
+
+The assertions derive leave balances and policy limits from the live database. The medical-insurance abstention case is skipped if the current document search results already contain room-rent text. The scenarios are based on current records, so the first and fifth tests require an earned-leave limit below 12 and 15 days respectively.
 
 The API deliberately does not yet calculate business-day balances (weekends/holidays), enforce annual allowance, or support manager approval chains because those rules depend on company policy and location. The `requestedDays` value currently counts calendar days and should be revised once the policy is decided.
 

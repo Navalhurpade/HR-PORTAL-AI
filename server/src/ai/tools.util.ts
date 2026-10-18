@@ -213,8 +213,6 @@ export async function getLeavesData(userId: string, filters: GetLeavesDataFilter
      LIMIT 10`,
     [normalizedUserId, parsedFilters.status ?? null, fromDate, toDate],
   );
-  console.log({ getMyLeaves: result });
-
   return result.rows.map((row) => ({
     leaveRequestId: row.leave_request_id,
     userId: row.user_id,
@@ -270,8 +268,6 @@ export async function getMyLeaveBalance(
      ORDER BY current_policy.display_name`,
     [normalizedUserId, year],
   );
-  console.log({ leaveBalence: policies });
-
   return policies.rows.map((policy) => {
     const approvedDays = Number(policy.approved_days);
     const annualAllowanceDays = policy.annual_allowance_days === null ? null : Number(policy.annual_allowance_days);
@@ -288,8 +284,6 @@ export async function getMyLeaveBalance(
 
 export async function getLeavePolicy(leaveType?: string): Promise<LeavePolicyRecord[]> {
   const normalizedLeaveType = leaveType?.trim() || null;
-  console.log({ leaveType });
-
   const result = await pool.query<{
     policy_id: string;
     leave_type: string;
@@ -313,8 +307,6 @@ export async function getLeavePolicy(leaveType?: string): Promise<LeavePolicyRec
      ORDER BY display_name`,
     [normalizedLeaveType],
   );
-  console.log('leave policy');
-
   return result.rows.map(toLeavePolicyRecord);
 }
 
@@ -506,7 +498,5 @@ export async function SearchCompanyDocuments(query: string): Promise<CompanyDocu
      LIMIT 3`,
     [queryVector],
   );
-  console.log({ query, result });
-
   return result.rows;
 }
