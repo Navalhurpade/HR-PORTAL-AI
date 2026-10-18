@@ -1,94 +1,90 @@
-# HR Portal API
+# Nori API
 
-Fastify + TypeScript backend with PostgreSQL, bearer-token authentication, role-based leave APIs, and SQL migrations.
+The backend is a Fastify + TypeScript API for the Nori HR assistant and portal. It provides authenticated HR routes, company-document ingestion and retrieval, and a LangChain agent with configurable chat providers.
 
 ## Local setup
 
-1. Install PostgreSQL and create a database named `hr_portal` (or choose another database name).
-2. Copy `.env.example` to `.env` and set `DATABASE_URL`. For a hosted PostgreSQL provider, set `CA_CERT_PATH=./ca.pem` (or the PEM path provided by the provider); TLS certificate verification remains enabled.
-3. Run `npm install`.
-4. Run `npm run db:migrate` to create the schema.
-5. Set `JWT_SECRET` to a random secret of at least 32 characters for stable tokens (required in production). Without it, local development generates an ephemeral secret on startup.
-6. Set `GOOGLE_API_KEY` in `.env` for company-document embeddings. The key is used only by the server; never add it to the client or commit it.
-7. Provision the initial administrator out-of-band with the secure user creation command below.
-8. Run `npm run dev`; the API listens on `http://127.0.0.1:3001` by default.
-9. The API checks PostgreSQL before listening and logs a successful connection. `GET /health` checks database availability.
+1. Install Node.js/npm and PostgreSQL with the pgvector extension available.
+2. Copy `.env.example` to `.env` and configure `DATABASE_URL`, the selected AI provider's settings, and `GOOGLE_API_KEY` for document embeddings. Set `JWT_SECRET` to a unique random value of at least 32 characters for stable local tokens and production.
+3. Install dependencies with `npm ci`.
+4. Apply migrations with `npm run db:migrate`; verify connectivity with `npm run db:check`.
+5. Provision a super-admin account from an interactive terminal using the command below.
+6. Start the API with `npm run dev`; it listens on `http://127.0.0.1:3001` by default.
 
-`npm run build` type-checks and emits the production server to `dist/`; `npm start` runs that build.
+The API checks its PostgreSQL connection before listening. `GET /health` checks database availability. Use `npm run build` to type-check and emit `dist/`, then `npm start` to run the compiled API.
 
-## Initial account
+## Configuration
 
-Public registration creates employee accounts only. Provision HR and super-admin accounts from an interactive terminal, entering a password when prompted (input is not echoed):
+| Variable | Required | Purpose |
+|---|---:|---|
+| `DATABASE_URL` | Yes | PostgreSQL connection string. |
+| `AI_PROVIDER` | No | Chat provider: `google` (default), `groq`, `openai`, `nvidia`, or `lmstudio`. |
+| `GOOGLE_API_KEY` | For Gemini chat and document embedding | Used by Gemini chat when `AI_PROVIDER=google` and always for Gemini document embeddings. |
+| `GOOGLE_MODEL` | No | Gemini chat model; defaults to `gemini-3.1-flash-lite`. |
+| `GROQ_API_KEY`, `OPENAI_API_KEY`, `NVIDIA_API_KEY` | For selected provider | API key for the corresponding chat provider. |
+| `GROQ_MODEL`, `OPENAI_MODEL`, `NVIDIA_MODEL` | No | Optional model overrides for the corresponding chat provider. |
+| `LM_STUDIO_BASE_URL`, `LM_STUDIO_MODEL` | No | Optional OpenAI-compatible LM Studio endpoint and model; defaults to `http://localhost:1234/v1`. |
+| `JWT_SECRET` | Production | At least 32 characters. If omitted in development, a random in-memory secret is generated at startup. |
+| `HOST`, `PORT` | No | API bind address and port; defaults to `127.0.0.1` and `3001`. |
+| `CLIENT_ORIGIN` | No | Comma-separated browser origins allowed by CORS. |
+| `CA_CERT_PATH` | No | Path to a provider CA PEM for verified TLS to hosted PostgreSQL. |
+| `COMPANY_DOCUMENTS_DIR` | No | File storage location; defaults to `storage/company-documents` relative to the server working directory. |
+| `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | No | Optional LangSmith tracing configuration. |
 
-`npm run db:create-user -- --user-id ADM-0001 --name "Jordan Lee" --email jordan@example.com --role super_admin --department Administration`
+Copy `.env.example` to `.env`; local credentials and certificates are not part of the repository. `DB_USER`, `DB_PASSWORD`, `DB_HOST`, and `DB_PORT` are not read independently by the current connection pool; configure `DATABASE_URL`.
 
-The command requires a password of at least 12 characters and stores only a bcrypt hash. Create a super admin first; use that account's authenticated, audited provisioning workflow (to be added) for subsequent accounts. Do not use the UI's demo role switch as an authorization mechanism.
+## Provision an administrator
 
-## Authentication and authorization
+There is no public HR/admin registration endpoint. Create the initial super-admin out of band:
 
-- `POST /auth/register` — JSON `{ "name": "...", "email": "...", "department": "...", "password": "..." }`; creates an employee account and returns a 30-minute bearer access token. Password must be at least 12 characters; registration is rate-limited. Role, user ID, and manager assignment are not client-controlled.
-- `POST /auth/login` — JSON `{ "email": "...", "password": "..." }`; returns a 30-minute bearer access token. Login is rate-limited; after 5 failed attempts the account is locked for 15 minutes.
-- `GET /auth/me` — current active user's profile.
-- Send the token as `Authorization: Bearer <accessToken>` for protected endpoints. The API reloads the active user and role from PostgreSQL on each request, so role changes/deactivation take effect immediately.
-- HR/admin account provisioning and policy mutation APIs are not exposed.
+```powershell
+npm run db:create-user -- --user-id ADM-0001 --name "Jordan Lee" --email jordan@example.com --role super_admin --department Administration
+```
 
-## Leave API
+The command prompts for a password (minimum 12 characters) without echoing it and stores a bcrypt hash. Public registration, if enabled, creates employee accounts only. No demo accounts, company documents, or company-specific leave policy values are seeded automatically.
 
-- `GET /leave-policies` — active policies for signed-in users.
-- `GET /leaves?status=pending&limit=50&offset=0` — employees only see their own requests; HR and super admins can list all requests and optionally filter with `userId`.
-- `GET /leaves/:leaveRequestId` — employees can read only their own requests; HR/super admins can read any request.
-- `POST /leaves` — creates a pending request for the authenticated user; validates dates and active policy, checks max consecutive days and overlapping pending/approved requests.
-- `POST /leaves/:leaveRequestId/approve` and `/reject` — HR and super admins only; only pending requests can be decided; self-approval is prohibited. `decisionNote` is optional.
+## API capabilities
 
-## Company documents
+- **Authentication:** `POST /auth/register`, `POST /auth/login`, and `GET /auth/me`. Tokens are short-lived bearer tokens. On protected requests the API reloads the active user's role from PostgreSQL.
+- **Leave:** `GET /leave-policies`, `GET /leaves`, `GET /leaves/:leaveRequestId`, `POST /leaves`, and HR/admin-only approve/reject routes. Employees are restricted to their own requests; HR and super admins can review requests. Self-approval is prohibited.
+- **People:** User listing is permission-guarded; the browser does not grant or select roles.
+- **Company documents:** Signed-in users can list and download documents. HR and super admins can upload or delete documents. Uploads support PDF, Word, Excel, PowerPoint, RTF, CSV, and plain text, up to 25 MB. Extracted text chunks and 3,072-dimensional Gemini embeddings are stored in PostgreSQL; uploaded files are stored locally by default.
+- **Nori chat:** `POST /chat` returns a complete response; `POST /chat/stream` sends source-status and completion events over server-sent events. Both require authentication and are rate-limited. The request accepts at most 4,000 characters per message, 12 prior turns, and 12,000 aggregate history characters.
 
-- `GET /company-documents` and `GET /company-documents/:id` — any signed-in user can list and download shared company documents.
-- `POST /company-documents` and `DELETE /company-documents/:id` — HR and super admins only.
-- Uploads accept PDF, Word, Excel, PowerPoint, RTF, CSV, and plain-text files up to 25 MB. File contents are stored in `storage/company-documents` under the server working directory by default; document metadata and each extracted text chunk with its 3,072-dimensional Gemini embedding are stored in PostgreSQL. Set `COMPANY_DOCUMENTS_DIR` to change the file location. Set `GOOGLE_API_KEY` to enable document embedding generation. The local storage directory is excluded from version control.
+The agent gets its user ID, role, and department from the authenticated request, not from client-supplied chat fields. Leave tools query the signed-in user's records. It can retrieve company-document passages and read live leave data; request creation or updates require an explicit user request and the required details. HR approval is performed through the role-guarded HR API, not by Nori.
 
-## Nori chat API
+## Retrieval and tracing
 
-- `POST /chat` — requires a bearer token and is limited to 20 requests per minute.
-- Request JSON: `{ "message": "...", "conversationId": "optional-uuid", "history": [{ "role": "user|assistant", "content": "..." }] }`. Messages are non-blank and at most 4,000 characters; history is limited to 12 turns/12,000 aggregate characters. Unknown fields (including client-supplied user IDs or roles) are rejected.
-- Uses a LangChain agent with the OpenAI-compatible local model endpoint at `http://localhost:1234/v1` (LM Studio), using `meta-llama-3-8b-instruct`. The leave-data tools query records for the signed-in user.
-- The system prompt includes the signed-in user's verified ID, role, and department; verified leave records are sent only when the user-scoped tool retrieves them. Name, email, and other employee data are not sent. Conversation history is currently held in the browser and sent with each message; it is not persisted in PostgreSQL. Do not treat the model as an approval/decision system or send sensitive HR/medical details in chat until provider data handling and retention are reviewed.
-- Missing `GOOGLE_API_KEY` returns `503 AI_NOT_CONFIGURED`; provider/network failures return sanitized error codes and do not expose upstream response bodies or credentials.
+Document uploads are parsed into text chunks, embedded with `gemini-embedding-001` at 3,072 dimensions, and stored in the `company_document_chunks` pgvector column. At query time, the search tool embeds the query and ranks chunks by vector distance. Nori is instructed to use retrieved documents for policy claims, use authorized tools for live HR data, and abstain if the available evidence is insufficient.
 
-## Live agent integration tests
+When configured with LangSmith environment variables, LangChain tracing can capture model and tool runs. Traces may contain prompts, model responses, and retrieved HR/document data; use a test project and non-sensitive fixtures, and review provider data handling before enabling traces with real data.
 
-The five Nori behavior tests use the real local chat model, a separate PostgreSQL test database, and the real leave/document tools. They are skipped unless explicitly enabled and do not install test doubles. The scenarios intend no HR mutations; keep the database disposable in case a faulty agent attempts an unexpected action.
+## Live-agent integration tests
 
-1. Configure the server environment as above, start LM Studio at `http://localhost:1234/v1`, and load the model named `meta-llama-3-8b-instruct`.
-2. Set `AI_AGENT_TEST_DATABASE_URL` to a separate, migrated, disposable test database containing active leave policies, an employee account, and company-document chunks. Its database name must include `test`, `sandbox`, or `integration`; the suite refuses to use `DATABASE_URL` as its test database. Do not run these tests against production data.
-3. Set `AI_AGENT_TEST_USER_ID` to an active employee in that test database.
-4. From `server`, set `AI_AGENT_INTEGRATION=1` and run `npm run test:agent`.
+`npm test` invokes five live-agent scenarios; they are skipped unless `AI_AGENT_INTEGRATION=1` is set. They use the selected real chat provider, PostgreSQL database, and tools rather than test doubles.
 
-For PowerShell:
+To enable them, configure:
+
+- `AI_AGENT_TEST_DATABASE_URL` to a separate, migrated, disposable PostgreSQL database. Its database name must include `test`, `sandbox`, or `integration`; it must not equal `DATABASE_URL`.
+- `AI_AGENT_TEST_USER_ID` to an active employee account in that test database.
+- The selected provider's chat credentials, `GOOGLE_API_KEY` for embeddings, plus test data including active leave policies and document chunks.
+- `AI_AGENT_INTEGRATION=1`.
+
+PowerShell example:
 
 ```powershell
 $env:AI_AGENT_INTEGRATION = '1'
+$env:AI_AGENT_TEST_DATABASE_URL = 'postgres://user:password@localhost:5432/hr_portal_integration'
 $env:AI_AGENT_TEST_USER_ID = 'your-test-employee-id'
-npm run test:agent
+npm test
 ```
 
-The assertions derive leave balances and policy limits from the live database. The medical-insurance abstention case is skipped if the current document search results already contain room-rent text. The scenarios are based on current records, so the first and fifth tests require an earned-leave limit below 12 and 15 days respectively.
+The scenarios check tool selection and evidence in answers combining balances with policies, document-based abstention when a limit is not supported, reporting multiple live balances and policy rules, asking for missing leave-request details without calling a mutation tool, and resisting an unverified role claim. Requirements are derived from fixture data; one missing-evidence scenario skips if the indexed documents already contain the answer. Keep the database disposable in case a model makes an unexpected tool call. Do not run these tests against production data.
 
-The API deliberately does not yet calculate business-day balances (weekends/holidays), enforce annual allowance, or support manager approval chains because those rules depend on company policy and location. The `requestedDays` value currently counts calendar days and should be revised once the policy is decided.
+## Known limitations
 
-## Initial data model
-
-- `users`: requested user fields (`user_id`, name, email, role, department, manager_id), plus active/timestamp and bcrypt password-hash/lockout fields. `manager_id` is a self-reference to another user.
-- `leave_policies`: versioned rules by leave type, including allowance, max consecutive days, carryover, paid status, documentation requirement, and effective dates. No policy limits are seeded because they must be confirmed against company rules and location.
-- `leave_requests`: request dates, requested day count, reason, status, and reviewer metadata. Each request references the exact policy version in force when it was submitted.
-
-## Policy modeling recommendation
-
-Start with the three tables above. Treat `leave_type` as a stable key on a versioned `leave_policies` row; do not store policy limits on the user or leave request. When a policy changes, insert a new policy version and close the previous `effective_to` date so old requests retain their original policy reference.
-
-Compute balances from the applicable allowance and approved requests at first. If the business later needs accrual schedules, manual adjustments, carryover transactions, or an audit trail of balance changes, add a `leave_balance_transactions` ledger then; avoid a manually maintained balance number that can drift from approved requests.
-
-Before implementing request endpoints, decide: whether entitlements vary by country/office, department, employment type, or seniority; whether leave is counted in working days and how public holidays are handled; carryover/accrual rules; whether medical leave is capped or requires documentation; and whether approvals are by manager, HR, or a multi-step chain. These determine the policy uniqueness/scope and request validation rules.
-
-## Security notes
-
-Public registration is unverified and should be paired with email verification or an invitation flow before production use. It only creates employee accounts; elevated roles remain operator-provisioned. Access tokens are short-lived, and the active role is reloaded from the database on each protected request. Add production-grade refresh/session revocation, audit logging, CSRF protections if cookies are adopted, and account recovery before broad deployment.
+- Leave-day counts use calendar days. Business-day and holiday rules, annual allowance enforcement, and manager approval chains are not implemented.
+- Public registration is unverified; add invitation/email verification and account recovery before broad deployment.
+- There is no production-grade refresh-token/session-revocation or audit-log system.
+- Chat history is client-held and is not persisted by the API.
+- The model is instructed not to make unsupported claims or approve/reject HR requests, but model output is not a substitute for HR review or a correctness guarantee.

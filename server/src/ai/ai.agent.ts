@@ -1,15 +1,10 @@
-import { ChatGroq } from '@langchain/groq';
-import { ChatOpenAI } from '@langchain/openai';
-import { ChatGoogle } from '@langchain/google';
-
 import { createAgent } from 'langchain';
 import type { UserRole } from '../auth/types.js';
+import { AiProviderConfigurationError, createChatModel } from './model.provider.js';
 import { createAssistantTools, type AssistantSourceUpdate } from './tools.js';
 
 export type { AssistantSourceUpdate } from './tools.js';
 
-const GROQ_MODEL = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
-const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_TOOL_ROUNDS = 5;
 
 export interface ChatTurn {
@@ -67,9 +62,14 @@ export async function generateAssistantReply(
   message: string,
   onSourceUpdate?: (source: AssistantSourceUpdate) => void,
 ) {
-  const apiKey = process.env.GOOGLE_API_KEY?.trim();
-  if (!apiKey || apiKey === 'key_here') {
-    throw new AiServiceError('The AI assistant is not configured yet.', 503, 'AI_NOT_CONFIGURED');
+  let model;
+  try {
+    model = createChatModel();
+  } catch (error) {
+    if (error instanceof AiProviderConfigurationError) {
+      throw new AiServiceError(error.message, 503, 'AI_NOT_CONFIGURED');
+    }
+    throw error;
   }
 
   const roleDescription = context.role.replace('_', ' ');
@@ -118,43 +118,6 @@ export async function generateAssistantReply(
 
     `Verified user context: \nuserId: ${context.userId.trim()} \nrole: ${roleDescription} \ndepartment: ${context.department}.`,
   ].join('\n');
-
-  // const model = new ChatGroq({
-  //   apiKey,
-  //   model: GROQ_MODEL,
-  //   temperature: 0,
-  //   maxTokens: 2048,
-  //   topP: 0.95,
-  //   timeout: REQUEST_TIMEOUT_MS,
-  // });
-  // const model = new ChatOpenAI({
-  //   apiKey: process.env.NVIDIA_API_KEY,
-  //   configuration: {
-  //     baseURL: 'https://integrate.api.nvidia.com/v1', // Use your local NIM IP if self-hosting
-  //   },
-  //   model: process.env.NVIDIA_MODEL, // Specify an active NVIDIA model
-  //   temperature: 0.5,
-  // });
-
-  const model = new ChatGoogle({
-    apiKey,
-    model: process.env.GOOGLE_MODEL,
-    temperature: 0,
-    maxOutputTokens: 2048,
-    topP: 0.95,
-  });
-
-  // const model = new ChatOpenAI({
-  //   // Point to LM Studio's local port
-  //   configuration: {
-  //     baseURL: 'http://localhost:1234/v1',
-  //   },
-  //   // Provide a placeholder API key since LM Studio doesn't require a real one
-  //   apiKey: 'lm-studio',
-  //   // Optional: specify the model name loaded in LM Studio, or omit to use the currently active model
-  //   modelName: 'meta-llama-3-8b-instruct',
-  //   temperature: 0.7,
-  // });
 
   const agent = createAgent({
     model,
