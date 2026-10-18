@@ -1,12 +1,8 @@
-
 # Nori — An AI-Powered HR Assistant
-
 Nori is an AI assistant integrated into a full-stack HR portal designed to manage employee leave requests, track leave balances, maintain company policies, and support HR workflows. The portal provides role-based access for employees, HR personnel, and super admins, with permissions enforced by the backend.
-
 **Nori brings natural-language interaction to the HR portal**, allowing employees to ask policy questions, retrieve personal HR information, and perform supported leave-management actions through a conversational interface.
 
 ### What Nori Can Do
-
 - **Answer from Company Documents:** HR and authorized administrators can upload supported documents. Nori indexes their content using Gemini embeddings, retrieves relevant passages with PostgreSQL and pgvector, and presents document sources in chat.
 - **Retrieve Live HR Data:** Uses backend tools to access the signed-in employee's leave balance, leave requests, and active leave policies, combining relevant information to provide contextual answers.
 - **Enforce Role-Based Access Control (RBAC):** The portal supports `EMPLOYEE`, `HR`, and `SUPER_ADMIN` roles. The backend derives the authenticated user's identity, enforces role and resource-level permissions, and prevents the model from choosing whose HR records it can access.
