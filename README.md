@@ -1,16 +1,44 @@
-# Nori — AI-powered HR assistant
+# Nori — an AI-powered HR assistant
 
-Nori is an AI-powered HR assistant built with retrieval-augmented generation (RAG), tool calling, and observable LLM workflows. It answers from company documents and authenticated HR records, and shows which sources it used.
+**Nori answers HR questions using company documents and live, access-controlled HR data.** It combines retrieval-augmented generation (RAG), model tool-calling, and observable LLM workflows in a full-stack HR portal.
 
-## See the workflow
+### What Nori can do
 
-Try these questions after signing in and loading policies, leave data, and a company document:
+- **Find answers in company documents:** Upload supported files, index their text with Gemini embeddings, retrieve relevant passages using PostgreSQL + pgvector, and show document sources in chat.
+- **Answer with live HR data:** Use backend tools to look up the signed-in employee's leave balance, requests, and active leave policies—and combine relevant facts rather than relying on model guesswork.
+- **Respect user access:** The API supplies verified identity and role context and enforces permissions; the model does not get to choose whose HR records it can query.
+- **Show its work:** Stream tool/source activity into the chat UI and optionally trace model/tool runs with LangSmith.
+- **Support HR workflows:** Employees can submit or update their own leave requests; authorized HR users can review requests through role-guarded portal/API routes.
+
+The assistant is instructed to ground answers in retrieved evidence and acknowledge when it cannot verify a claim. This is an implemented behavior goal, not a guarantee that every model response is correct.
+
+## Demo
+
+The video and screenshots belong here so visitors can see the portal and Nori's evidence/tool activity before diving into the implementation.
+
+**Video walkthrough:** Add the video link here after uploading it with GitHub's README editor or issue composer; GitHub will provide an asset URL.
+
+**Screenshots:** Add screenshots to the repository (for example, `docs/images/`) and embed them below:
+
+<!--
+Replace these notes with your real demo media:
+
+[![Watch the Nori demo](docs/images/nori-demo-thumbnail.png)](PASTE_GITHUB_VIDEO_ASSET_URL_HERE)
+
+![Nori chat showing retrieved sources](docs/images/nori-chat-sources.png)
+
+![HR portal leave review screen](docs/images/nori-hr-portal.png)
+-->
+
+## Try the workflow
+
+After signing in and loading policies, leave data, and a company document:
 
 1. Ask **“How much earned leave do I have, and what is the consecutive-day limit?”** Nori can combine the signed-in employee's live balance with the active leave policy.
 2. Ask **“What does our benefits document say about medical coverage?”** Nori searches document passages and should say when the retrieved material does not establish an answer.
-3. Watch the chat's **Sources & activity** area for document, policy, balance, or leave-request tools and their completion status.
+3. Watch **Sources & activity** in the chat for document, policy, balance, or leave-request tools and their completion status.
 
-The live-model integration tests include assertions for these evidence paths and for abstaining when evidence is missing. They require a separately configured test database and Google AI credentials; they are skipped by default. No hosted demo or screenshot is included yet.
+Five live-model integration scenarios exercise evidence/tool selection, abstention when evidence is missing, and avoiding a leave action when required details are missing. These use a separately configured test database and Google AI credentials; they are skipped by default.
 
 ## Architecture
 
