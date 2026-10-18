@@ -1,34 +1,41 @@
-# Nori — an AI-powered HR assistant
 
-**Nori answers HR questions using company documents and live, access-controlled HR data.** It combines retrieval-augmented generation (RAG), model tool-calling, and observable LLM workflows in a full-stack HR portal.
+# Nori — An AI-Powered HR Assistant
 
-### What Nori can do
+Nori is an AI assistant integrated into a full-stack HR portal designed to manage employee leave requests, track leave balances, maintain company policies, and support HR workflows. The portal provides role-based access for employees, HR personnel, and super admins, with permissions enforced by the backend.
 
-- **Find answers in company documents:** Upload supported files, index their text with Gemini embeddings, retrieve relevant passages using PostgreSQL + pgvector, and show document sources in chat.
-- **Answer with live HR data:** Use backend tools to look up the signed-in employee's leave balance, requests, and active leave policies—and combine relevant facts rather than relying on model guesswork.
-- **Respect user access:** The API supplies verified identity and role context and enforces permissions; the model does not get to choose whose HR records it can query.
-- **Show its work:** Stream tool/source activity into the chat UI and optionally trace model/tool runs with LangSmith.
-- **Support HR workflows:** Employees can submit or update their own leave requests; authorized HR users can review requests through role-guarded portal/API routes.
+**Nori brings natural-language interaction to the HR portal**, allowing employees to ask policy questions, retrieve personal HR information, and perform supported leave-management actions through a conversational interface.
 
-The assistant is instructed to ground answers in retrieved evidence and acknowledge when it cannot verify a claim. This is an implemented behavior goal, not a guarantee that every model response is correct.
+### What Nori Can Do
 
-## Demo
+- **Answer from Company Documents:** HR and authorized administrators can upload supported documents. Nori indexes their content using Gemini embeddings, retrieves relevant passages with PostgreSQL and pgvector, and presents document sources in chat.
+- **Retrieve Live HR Data:** Uses backend tools to access the signed-in employee's leave balance, leave requests, and active leave policies, combining relevant information to provide contextual answers.
+- **Enforce Role-Based Access Control (RBAC):** The portal supports `EMPLOYEE`, `HR`, and `SUPER_ADMIN` roles. The backend derives the authenticated user's identity, enforces role and resource-level permissions, and prevents the model from choosing whose HR records it can access.
+- **Support Leave Management:** Employees can submit or update their own leave requests, while authorized HR users can review requests through protected portal and API routes.
+- **Provide Observable AI Workflows:** Displays tool and source activity in the chat interface and supports LangSmith tracing for inspecting model invocations, tool calls, execution flows, and metrics.
+- **Promote Evidence-Grounded Answers:** The assistant is instructed to use retrieved documents and verified tool results, acknowledge missing evidence, and avoid inventing policies or personal HR data. This is a design goal, not a guarantee that every model response is correct.
 
-The video and screenshots belong here so visitors can see the portal and Nori's evidence/tool activity before diving into the implementation.
+## Screenshots & Demo Videos
 
-**Video walkthrough:** Add the video link here after uploading it with GitHub's README editor or issue composer; GitHub will provide an asset URL.
+### 1. Policy-Grounded Leave Guidance
+Nori retrieves relevant company policy documents and checks the user's leave balance to answer a question about taking five consecutive days of leave. The video also includes a walkthrough of the application.
 
-**Screenshots:** Add screenshots to the repository (for example, `docs/images/`) and embed them below:
+[Watch Demo](https://github.com/user-attachments/assets/cdd36043-868a-474f-ba51-a639b7fcb8ee)
 
-<!--
-Replace these notes with your real demo media:
+### 2. Leave Application Through Nori
+Demonstrates the end-to-end leave application workflow through natural language, with Nori successfully submitting a leave request.
 
-[![Watch the Nori demo](docs/images/nori-demo-thumbnail.png)](PASTE_GITHUB_VIDEO_ASSET_URL_HERE)
+[Watch Demo](https://github.com/user-attachments/assets/06e88794-df86-41b2-acfd-f6768f260ab4)
 
-![Nori chat showing retrieved sources](docs/images/nori-chat-sources.png)
+### 3. Medical Insurance & Benefits Q&A
+Shows Nori answering employee medical insurance questions using information retrieved from company benefits documents.
 
-![HR portal leave review screen](docs/images/nori-hr-portal.png)
--->
+[Watch Demo](https://github.com/user-attachments/assets/9e439ace-7d00-4c6d-9225-38d83283fded)
+
+### 4. Leave Conflict Detection & Balance Lookup
+Demonstrates how Nori handles a leave application when the user already has a leave request on the selected dates. It also retrieves the user's leave balance to provide additional context.
+
+![Leave conflict detection and balance lookup](https://github.com/user-attachments/assets/6b8bcad7-0479-4312-94c7-f44edbdcb759)
+
 
 ## Try the workflow
 
@@ -162,9 +169,7 @@ Set these in `server/.env`; secrets belong on the server only.
 
 ## Current limitations
 
-- This is a portfolio project, not a production-validated HR system. Review provider data handling and retention before sending real employee or medical information to an LLM.
 - Leave requests are currently counted in calendar days. Business-day/holiday rules, annual allowance enforcement, and manager approval chains are not implemented.
-- HR/admin provisioning is operator-managed; public registration is not backed by email verification or an invitation flow.
 - Chat history is held in the browser and sent with requests; it is not persisted in PostgreSQL. The API accepts a bounded recent history.
 - Chat answers depend on the configured model, populated company documents, and current database records. The agent is instructed to ground answers and abstain when evidence is missing, but this is not a guarantee of correctness.
 - The behavior suite uses a real model and database, takes external credentials and seeded records, and can vary with those records; it is skipped unless explicitly enabled.
